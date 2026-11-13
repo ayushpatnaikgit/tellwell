@@ -9,8 +9,7 @@
 </p>
 
 <p align="center">
-  <a href="https://ayushpatnaikgit.github.io/tellwell/">Website</a> ·
-  <a href="https://github.com/ayushpatnaikgit/tellwell/releases/latest/download/TellWell.dmg">Download TellWell.dmg</a>
+  <a href="https://ayushpatnaikgit.github.io/tellwell/">Website</a>
 </p>
 
 Install TellWell and its on-device engine (Apple Silicon, macOS 14+) with one command:
@@ -30,10 +29,8 @@ Mac dictation app. It keeps everything FreeFlow does and adds a focus on running
 recognition on the Apple Neural Engine and a small cleanup model fine-tuned for dictation, through the
 [freeflow-local](https://github.com/ayushpatnaikgit/freeflow-local) engine.
 
-**Status: early.** TellWell isn't signed with an Apple Developer ID yet. The one-line installer avoids the
-"could not verify" prompt; if you download the DMG instead, allow it once in System Settings → Privacy & Security →
-Open Anyway. TellWell installs alongside FreeFlow without sharing
-settings or permissions.
+**Status: early.** TellWell isn't signed with an Apple Developer ID yet; the one-line installer avoids macOS's
+"could not verify" prompt. TellWell installs alongside FreeFlow without sharing settings or permissions.
 
 Thanks to Zach Latta and the FreeFlow contributors, including [@marcbodea](https://github.com/marcbodea) for
 maintaining FreeFlow. TellWell is not affiliated with or endorsed by the FreeFlow project.
