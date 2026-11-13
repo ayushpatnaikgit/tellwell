@@ -604,7 +604,19 @@ final class AppState: ObservableObject, @unchecked Sendable {
     @Published var lastTranscript: String = ""
     @Published var errorMessage: String?
     @Published var statusText: String = "Ready"
-    @Published var hasAccessibility = false
+    @Published var hasAccessibility = false {
+        didSet {
+            // The global shortcut tap can't be created without Accessibility. When the permission arrives while the app
+            // is running (first launch, or after an update), start listening right away instead of after a relaunch.
+            if HotkeyMonitoringRecovery.shouldRetry(
+                wasTrusted: oldValue,
+                isTrusted: hasAccessibility,
+                monitoringFailed: hotkeyMonitoringErrorMessage != nil
+            ) {
+                restartHotkeyMonitoring()
+            }
+        }
+    }
     @Published var hotkeyMonitoringErrorMessage: String?
     @Published var isDebugOverlayActive = false
     @Published var selectedSettingsTab: SettingsTab? = .general
@@ -1862,6 +1874,10 @@ final class AppState: ObservableObject, @unchecked Sendable {
         } catch {
             hotkeyMonitoringErrorMessage = error.localizedDescription
             os_log(.error, log: recordingLog, "Hotkey monitoring failed to start: %{public}@", error.localizedDescription)
+            // Watch for Accessibility being granted so the hasAccessibility observer can retry.
+            if !AXIsProcessTrusted(), accessibilityTimer == nil {
+                startAccessibilityPolling()
+            }
         }
     }
 

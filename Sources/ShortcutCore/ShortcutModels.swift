@@ -566,3 +566,11 @@ extension ShortcutBinding {
         return withAddedModifiers(isCommandKey ? .option : .command)
     }
 }
+
+/// When global shortcut monitoring should be retried after a permission change.
+enum HotkeyMonitoringRecovery {
+    /// Retry only when Accessibility has just been granted and monitoring had failed to start.
+    static func shouldRetry(wasTrusted: Bool, isTrusted: Bool, monitoringFailed: Bool) -> Bool {
+        isTrusted && !wasTrusted && monitoringFailed
+    }
+}

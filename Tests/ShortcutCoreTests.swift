@@ -23,6 +23,7 @@ enum ShortcutCoreTests {
         testToggleStartedSessionIgnoresHoldShortcut()
         testDoubleTapModifierChordThroughMatcher()
         testSuggestedToggleForChosenHoldKey()
+        testHotkeyMonitoringRetriesWhenAccessibilityArrives()
     }
 
     private static func testBareFnHoldLifecycle() {
@@ -488,5 +489,26 @@ enum ShortcutCoreTests {
 
         let f5 = ShortcutPreset.f5.binding
         TestSupport.expect(f5.suggestedToggleForHold.modifiers == [.command], "A function key toggles with Command")
+    }
+
+    /// After an update or on first launch the shortcut tap fails until Accessibility is granted. Granting it while the
+    /// app runs must restart monitoring; otherwise the talk key silently does nothing until a relaunch.
+    private static func testHotkeyMonitoringRetriesWhenAccessibilityArrives() {
+        TestSupport.expect(
+            HotkeyMonitoringRecovery.shouldRetry(wasTrusted: false, isTrusted: true, monitoringFailed: true),
+            "Granting Accessibility after a failed start must retry"
+        )
+        TestSupport.expect(
+            !HotkeyMonitoringRecovery.shouldRetry(wasTrusted: false, isTrusted: true, monitoringFailed: false),
+            "Monitoring that is already running must not be restarted"
+        )
+        TestSupport.expect(
+            !HotkeyMonitoringRecovery.shouldRetry(wasTrusted: true, isTrusted: true, monitoringFailed: true),
+            "Repeated polls with no change must not keep restarting"
+        )
+        TestSupport.expect(
+            !HotkeyMonitoringRecovery.shouldRetry(wasTrusted: true, isTrusted: false, monitoringFailed: true),
+            "Losing Accessibility is not a reason to retry"
+        )
     }
 }
