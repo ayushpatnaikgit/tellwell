@@ -32,6 +32,7 @@ struct SetupView: View {
     @State private var engineStatus: LocalEngine.Status?
     @State private var engineChecked = false
     @State private var holdKeyDetected = false
+    @State private var setupChosenToggle: ShortcutBinding?
 
     // Test transcription state
     private enum TestPhase: Equatable {
@@ -439,101 +440,76 @@ struct SetupView: View {
         }
     }
 
+    /// "Press the key you want": captures what this keyboard actually sends instead of assuming a key exists.
+    /// Many third-party keyboards handle Fn internally, so macOS never sees it and a preset would silently never fire.
     var holdShortcutStep: some View {
         VStack(spacing: 20) {
+            Spacer(minLength: 0)
             Image(systemName: "keyboard.fill")
                 .font(.system(size: 60))
                 .foregroundStyle(TellWellBrand.accent)
 
-            Text("Hold to Talk Shortcut")
+            Text("Choose Your Talk Key")
                 .font(.title)
                 .fontWeight(.bold)
 
-            Text("Choose the key you want to hold while speaking, then press it once to check it.")
+            Text("Press the key you want to hold while you speak. A key next to the space bar works well, such as Fn, Right Option or Right Command.")
                 .multilineTextAlignment(.center)
                 .foregroundStyle(.secondary)
                 .fixedSize(horizontal: false, vertical: true)
 
-            ShortcutRoleSection(
-                role: .hold,
-                selection: appState.holdShortcut,
-                validationMessage: holdShortcutValidationMessage,
-                isCapturing: $isCapturingHoldShortcut,
-                onSelect: { binding in
-                    holdShortcutValidationMessage = appState.setShortcut(binding, for: .hold)
-                    // Keep the default toggle (Command + hold key) on the same key when moving off Fn.
-                    if appState.toggleShortcut == .defaultToggle, !binding.usesFnKey, binding.kind == .modifierKey {
-                        _ = appState.setShortcut(binding.withAddedModifiers(.command), for: .toggle)
-                    }
+            TalkKeyPicker(
+                chosen: holdKeyDetected ? appState.holdShortcut : nil,
+                onChoose: { binding in chooseTalkKey(binding) },
+                onConfirm: {
+                    guard holdKeyDetected else { return }
+                    withAnimation { currentStep = nextStep(currentStep) }
                 }
             )
-                .padding(.top, 10)
 
-            if appState.hasEnabledHoldShortcut {
-                holdKeyCheck
-            }
-
-            if appState.holdShortcut.usesFnKey, holdKeyDetected {
-                Text("Tip: If Fn opens Emoji picker, go to System Settings > Keyboard and change \"Press fn key to\" to \"Do Nothing\".")
+            if let message = holdShortcutValidationMessage {
+                Label(message, systemImage: "exclamationmark.triangle.fill")
+                    .font(.caption)
+                    .foregroundStyle(.orange)
+            } else if holdKeyDetected, appState.holdShortcut.usesFnKey {
+                Text("Tip: If Fn opens the Emoji picker, go to System Settings > Keyboard and change \"Press fn key to\" to \"Do Nothing\".")
                     .font(.caption)
                     .foregroundStyle(.orange)
                     .multilineTextAlignment(.center)
-            }
-
-        }
-        .onAppear { startHoldKeyCheck() }
-        .onDisappear { testHotkeyHarness.stop() }
-        .onChange(of: appState.holdShortcut) { _ in
-            holdKeyDetected = false
-            startHoldKeyCheck()
-        }
-        .onChange(of: isCapturingHoldShortcut) { _ in startHoldKeyCheck() }
-    }
-
-    /// Confirms this Mac can see the chosen key before setup moves on. Some keyboards (many third-party ones) handle
-    /// their Fn key internally, so the default shortcut would silently never fire.
-    private var holdKeyCheck: some View {
-        VStack(spacing: 8) {
-            HStack(spacing: 8) {
-                Image(systemName: holdKeyDetected ? "checkmark.circle.fill" : "hand.tap")
-                    .foregroundStyle(holdKeyDetected ? Color.green : TellWellBrand.accent)
-                Text(holdKeyDetected
-                     ? "\(appState.holdShortcut.displayName) works on this keyboard."
-                     : "Press \(appState.holdShortcut.displayName) now to check it works on this keyboard.")
-                    .fontWeight(.medium)
-            }
-            .padding(.horizontal, 14)
-            .padding(.vertical, 10)
-            .frame(maxWidth: .infinity)
-            .background(RoundedRectangle(cornerRadius: 10).fill(Color(nsColor: .controlBackgroundColor).opacity(0.6)))
-
-            if !holdKeyDetected {
-                Text("Nothing happens? Some keyboards handle their Fn key themselves, so your Mac never sees it. Choose Right Option or another key above.")
+                    .fixedSize(horizontal: false, vertical: true)
+            } else if holdKeyDetected, appState.hasEnabledToggleShortcut {
+                Text("For hands-free dictation, tap \(appState.toggleShortcut.displayName). You can change shortcuts later in Settings.")
                     .font(.caption)
                     .foregroundStyle(.secondary)
                     .multilineTextAlignment(.center)
                     .fixedSize(horizontal: false, vertical: true)
-                Button("Continue without checking") {
-                    withAnimation { currentStep = nextStep(currentStep) }
-                }
-                .buttonStyle(.link)
-                .font(.caption)
+            } else if !holdKeyDetected {
+                Text("Nothing happens when you press a key? Some keyboards handle their own Fn key, so your Mac never sees it. Try another key.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .multilineTextAlignment(.center)
+                    .fixedSize(horizontal: false, vertical: true)
             }
+            Spacer(minLength: 0)
         }
     }
 
-    private func startHoldKeyCheck() {
-        testHotkeyHarness.stop()
-        guard currentStep == .holdShortcut, appState.hasEnabledHoldShortcut, !isCapturingHoldShortcut else { return }
-        testHotkeyHarness.onAction = { action in
-            if case .start = action {
-                holdKeyDetected = true
-            }
+    private func chooseTalkKey(_ binding: ShortcutBinding) {
+        // Move a toggle that setup chose (or the untouched default) out of the way first, so it can't block the new key.
+        let toggleIsSetupManaged = appState.toggleShortcut == .defaultToggle || appState.toggleShortcut == setupChosenToggle
+        if toggleIsSetupManaged, binding.conflicts(with: appState.toggleShortcut) {
+            _ = appState.setShortcut(.disabled, for: .toggle)
         }
-        try? testHotkeyHarness.start(configuration: ShortcutConfiguration(
-            hold: appState.holdShortcut,
-            toggle: appState.toggleShortcut
-        ), startDelay: 0)
+        holdShortcutValidationMessage = appState.setShortcut(binding, for: .hold)
+        guard holdShortcutValidationMessage == nil else { return }
+        holdKeyDetected = true
+
+        // Keep the hands-free toggle on the same key: the default (Command + Fn) is unreachable without Fn.
+        guard toggleIsSetupManaged else { return }
+        let toggle = binding.suggestedToggleForHold
+        if appState.setShortcut(toggle, for: .toggle) == nil {
+            setupChosenToggle = toggle
+        }
     }
 
     var vocabularyStep: some View {
@@ -799,7 +775,7 @@ struct SetupView: View {
         case .screenRecording:
             return appState.hasScreenRecordingPermission
         case .holdShortcut:
-            return holdKeyDetected || !appState.hasEnabledHoldShortcut
+            return holdKeyDetected
         case .testTranscription:
             return testPhase == .done && !testTranscript.isEmpty && testError == nil
         default:
@@ -1040,6 +1016,92 @@ struct SetupView: View {
         }
     }
 
+}
+
+/// Listens for a single key press in the setup window and reports it as a hold-to-talk binding.
+/// Accepts modifier keys (Fn, Option, Command, Control, Shift, either side) and function keys.
+private struct TalkKeyPicker: View {
+    let chosen: ShortcutBinding?
+    let onChoose: (ShortcutBinding) -> Void
+    let onConfirm: () -> Void
+
+    @State private var backend: LocalShortcutCaptureBackend?
+    @State private var pressedModifiers: Set<UInt16> = []
+    @State private var pulsing = false
+
+    private static let functionKeyCodes: Set<UInt16> = [
+        122, 120, 99, 118, 96, 97, 98, 100, 101, 109, 103, 111, 105, 107, 113, 106, 64, 79, 80, 90
+    ]
+
+    var body: some View {
+        VStack(spacing: 8) {
+            if let chosen {
+                Label(chosen.displayName, systemImage: "checkmark.circle.fill")
+                    .font(.system(size: 22, weight: .semibold, design: .rounded))
+                    .foregroundStyle(.green)
+                Text("Hold this key to talk. Press a different key to change it.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            } else {
+                Label("Press a key now", systemImage: "hand.tap")
+                    .font(.system(size: 22, weight: .semibold, design: .rounded))
+                    .foregroundStyle(TellWellBrand.accent)
+                    .opacity(pulsing ? 0.55 : 1)
+                    .animation(.easeInOut(duration: 0.9).repeatForever(autoreverses: true), value: pulsing)
+                Text("Waiting for your key")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+        }
+        .padding(.vertical, 22)
+        .frame(maxWidth: .infinity)
+        .background(RoundedRectangle(cornerRadius: 14).fill(Color(nsColor: .controlBackgroundColor).opacity(0.6)))
+        .overlay(
+            RoundedRectangle(cornerRadius: 14)
+                .stroke(chosen == nil ? TellWellBrand.accent.opacity(0.5) : Color.green.opacity(0.5), lineWidth: 1.5)
+        )
+        .onAppear {
+            pulsing = true
+            start()
+        }
+        .onDisappear {
+            backend?.stop()
+            backend = nil
+        }
+    }
+
+    private func start() {
+        backend?.stop()
+        pressedModifiers = []
+        let capture = LocalShortcutCaptureBackend()
+        capture.onInputEvent = { event in
+            guard case .modifierChanged(let keyCode, let isDown) = event else { return }
+            if isDown {
+                pressedModifiers.insert(keyCode)
+                // One modifier on its own: that is the talk key.
+                if pressedModifiers == [keyCode],
+                   let binding = ShortcutBinding.fromModifierKeyCode(
+                       keyCode, pressedModifierKeyCodes: [keyCode], allowBareModifier: true
+                   ) {
+                    onChoose(binding)
+                }
+            } else {
+                pressedModifiers.remove(keyCode)
+            }
+        }
+        capture.onKeyDownEvent = { event in
+            if event.keyCode == 36 || event.keyCode == 76 {  // Return or Enter: continue
+                onConfirm()
+                return
+            }
+            guard !event.isARepeat, pressedModifiers.subtracting([ModifierKeyEventState.fnKeyCode]).isEmpty,
+                  Self.functionKeyCodes.contains(event.keyCode),
+                  let binding = ShortcutBinding.from(event: event, pressedModifierKeyCodes: []) else { return }
+            onChoose(binding)
+        }
+        capture.start()
+        backend = capture
+    }
 }
 
 private struct InlineTranscribingDots: View {
