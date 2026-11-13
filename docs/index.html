@@ -99,7 +99,7 @@
         <p class="fine" style="margin: 0 0 8px">Install TellWell and its on-device engine with one command in Terminal:</p>
         <div class="cmd" style="margin: 0 0 20px"><code id="cmd-hero">curl -fsSL https://ayushpatnaikgit.github.io/tellwell/install.sh <span style="white-space: nowrap">| sh</span></code><button class="copy" type="button" data-copy="cmd-hero">Copy</button></div>
         <div class="cta">
-          <a class="btn" href="#setup">Other ways to install</a>
+          <a class="btn" href="#setup">What it installs</a>
           <a class="btn" href="https://github.com/ayushpatnaikgit/tellwell">View source</a>
         </div>
         <p class="fine">Version 0.2.0 · Apple Silicon, macOS 14 or later · free and open source (MIT)</p>
@@ -146,21 +146,13 @@
 
     <section id="setup">
       <h2>Install</h2>
-      <p class="sub"><b>One command</b> (recommended). It installs TellWell after checking it against the release's published
+      <p class="sub"><b>One command.</b> It installs TellWell after checking it against the release's published
         checksum, installs the on-device engine (models download once, about 2 GB), starts it at login and connects the two:</p>
       <div class="cmd"><code id="cmd">curl -fsSL https://ayushpatnaikgit.github.io/tellwell/install.sh <span style="white-space: nowrap">| sh</span></code><button class="copy" type="button" data-copy="cmd">Copy</button></div>
       <p class="sub" style="margin-top: 16px">Then open TellWell, allow <b>Microphone</b> and <b>Accessibility</b> (and Screen Recording if you
-        want on-screen names spelled right), hold your dictation key and speak. Run the same command again to update.</p>
-      <h3 style="margin-top: 36px">Or download the app</h3>
-      <ol class="steps">
-        <li><a href="https://github.com/ayushpatnaikgit/tellwell/releases/latest/download/TellWell.dmg">Download TellWell.dmg</a> and drag TellWell into Applications.</li>
-        <li><b>Open it once.</b> This early build isn't signed with an Apple Developer ID yet, so macOS stops the first launch:
-          go to <b>System Settings → Privacy &amp; Security</b> and click <b>Open Anyway</b>.</li>
-        <li><b>For the on-device engine,</b> run <code>curl -fsSL https://raw.githubusercontent.com/ayushpatnaikgit/freeflow-local/main/get.sh | sh -s -- --app tellwell</code>.
-          TellWell needs it to transcribe.</li>
-      </ol>
-      <p class="note">TellWell is early. It installs alongside FreeFlow with its own settings and permissions, and updates itself
-        from its GitHub releases. Signed releases come next.</p>
+        want on-screen names spelled right), hold your dictation key and speak.</p>
+      <p class="note">TellWell is early. It installs alongside FreeFlow with its own settings and permissions. Run the command
+        again to update, or let TellWell update itself from its GitHub releases. Signed releases come next.</p>
     </section>
   </main>
 
