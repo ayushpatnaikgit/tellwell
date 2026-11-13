@@ -167,7 +167,7 @@ final class UpdateManager: ObservableObject {
         set { UserDefaults.standard.set(newValue, forKey: "updateLastPostTranscriptionReminderDate") }
     }
 
-    private let releasesURL = URL(string: "https://api.github.com/repos/zachlatta/freeflow/releases?per_page=100")!
+    private let releasesURL = URL(string: "https://api.github.com/repos/ayushpatnaikgit/tellwell/releases?per_page=100")!
     private let stabilityBufferDays: TimeInterval = 3
     private let checkIntervalSeconds: TimeInterval = 7 * 24 * 60 * 60 // 7 days
     private let postTranscriptionReminderInterval: TimeInterval = 24 * 60 * 60 // 1 day
@@ -717,7 +717,7 @@ final class UpdateManager: ObservableObject {
 
     private func performUpdate(downloadURL: URL, expectedSize: Int) async {
         let fm = FileManager.default
-        let tempDir = fm.temporaryDirectory.appendingPathComponent("freeflow-update-\(UUID().uuidString)")
+        let tempDir = fm.temporaryDirectory.appendingPathComponent("tellwell-update-\(UUID().uuidString)")
 
         do {
             try fm.createDirectory(at: tempDir, withIntermediateDirectories: true)
@@ -726,7 +726,7 @@ final class UpdateManager: ObservableObject {
             return
         }
 
-        let dmgPath = tempDir.appendingPathComponent("FreeFlow.dmg")
+        let dmgPath = tempDir.appendingPathComponent("TellWell.dmg")
 
         // MARK: Download phase
         updateStatus = .downloading
@@ -828,7 +828,7 @@ final class UpdateManager: ObservableObject {
             }
 
             // Copy app to staging directory
-            let stagingDir = fm.temporaryDirectory.appendingPathComponent("freeflow-staged-\(UUID().uuidString)")
+            let stagingDir = fm.temporaryDirectory.appendingPathComponent("tellwell-staged-\(UUID().uuidString)")
             try fm.createDirectory(at: stagingDir, withIntermediateDirectories: true)
             let stagedApp = stagingDir.appendingPathComponent(appBundle.lastPathComponent)
             try fm.copyItem(at: appBundle, to: stagedApp)
