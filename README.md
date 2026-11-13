@@ -8,6 +8,11 @@
   Private dictation for your Mac. Hold a key, speak, and clean text appears wherever you're typing.
 </p>
 
+<p align="center">
+  <a href="https://ayushpatnaikgit.github.io/tellwell/">Website</a> ·
+  <a href="https://github.com/ayushpatnaikgit/tellwell/releases/download/v0.1.0/TellWell.dmg"><b>Download TellWell.dmg (0.1.0, pre-release)</b></a>
+</p>
+
 ---
 
 TellWell is a fork of [FreeFlow](https://github.com/zachlatta/freeflow) by Zach Latta, the free and open-source
@@ -15,8 +20,9 @@ Mac dictation app. It keeps everything FreeFlow does and adds a focus on running
 recognition on the Apple Neural Engine and a small cleanup model fine-tuned for dictation, through the
 [freeflow-local](https://github.com/ayushpatnaikgit/freeflow-local) engine.
 
-**Status: early.** There is no signed TellWell download yet. Build it from source (below), or use FreeFlow with
-freeflow-local in the meantime. TellWell installs alongside FreeFlow without sharing settings or permissions.
+**Status: early.** The 0.1.0 pre-release isn't signed with an Apple Developer ID yet: after the first launch,
+allow it in System Settings → Privacy & Security → Open Anyway. TellWell installs alongside FreeFlow without sharing
+settings or permissions.
 
 Thanks to Zach Latta and the FreeFlow contributors, including [@marcbodea](https://github.com/marcbodea) for
 maintaining FreeFlow. TellWell is not affiliated with or endorsed by the FreeFlow project.
@@ -33,7 +39,7 @@ The rest of this README describes the features TellWell inherits from FreeFlow.
 
 ## Quick Start
 
-1. Build the app from source (see [Build from source](#build-from-source)); a signed download is coming
+1. Download [TellWell.dmg](https://github.com/ayushpatnaikgit/tellwell/releases/download/v0.1.0/TellWell.dmg) (or build from source)
 2. Get a free Groq API key from [groq.com](https://groq.com/)
 3. Hold `Fn` to talk, or tap `Command-Fn` to start and stop dictation, and have whatever you say pasted into the current text field
 
