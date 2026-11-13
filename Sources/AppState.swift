@@ -58,7 +58,7 @@ enum SettingsTab: String, CaseIterable, Identifiable {
 
 enum AppBuild {
     static var isDevBundle: Bool {
-        (Bundle.main.object(forInfoDictionaryKey: "CFBundleName") as? String) == "FreeFlow Dev"
+        (Bundle.main.object(forInfoDictionaryKey: "CFBundleName") as? String) == "TellWell Dev"
     }
 }
 
@@ -667,7 +667,7 @@ final class AppState: ObservableObject, @unchecked Sendable {
     private var activeRecordingTriggerMode: RecordingTriggerMode?
     private var activeTextInsertionTarget: AppTextInsertionTarget?
     private var insertionAccessibilityCancellable: AnyCancellable?
-    private let insertionAccessibilityQueue = DispatchQueue(label: "FreeFlow.insertion-accessibility", qos: .utility)
+    private let insertionAccessibilityQueue = DispatchQueue(label: "TellWell.insertion-accessibility", qos: .utility)
     private var activeOriginalFieldInsertionEnabled = false
     private var textInsertionTargetID: UUID?
     private var currentSessionIntent: SessionIntent = .dictation
@@ -1202,7 +1202,7 @@ final class AppState: ObservableObject, @unchecked Sendable {
         return audioDir
     }
 
-    /// URL of the flag file written while FreeFlow is actively recording.
+    /// URL of the flag file written while TellWell is actively recording.
     ///
     /// External tools (voice assistants, TTS barge-in pipelines, conversation
     /// apps) can poll this file to know when the user is dictating. The file
@@ -1210,11 +1210,11 @@ final class AppState: ObservableObject, @unchecked Sendable {
     /// Contents are the UNIX timestamp (seconds, float) of when recording
     /// started — useful for stale-flag detection after an unclean exit.
     ///
-    /// Path: `~/Library/Application Support/FreeFlow/is-recording`
-    /// (or `FreeFlow Dev/is-recording` when running the dev bundle).
+    /// Path: `~/Library/Application Support/TellWell/is-recording`
+    /// (or `TellWell Dev/is-recording` when running the dev bundle).
     static func recordingStateFlagURL() -> URL {
         let appSupport = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first!
-        let appName = Bundle.main.object(forInfoDictionaryKey: "CFBundleName") as? String ?? "FreeFlow"
+        let appName = Bundle.main.object(forInfoDictionaryKey: "CFBundleName") as? String ?? "TellWell"
         return appSupport.appendingPathComponent("\(appName)/is-recording")
     }
 
@@ -2389,13 +2389,13 @@ final class AppState: ObservableObject, @unchecked Sendable {
 
     private func beginCriticalDictationActivity() {
         guard !automaticTerminationDisabled else { return }
-        ProcessInfo.processInfo.disableAutomaticTermination("FreeFlow dictation in progress")
+        ProcessInfo.processInfo.disableAutomaticTermination("TellWell dictation in progress")
         automaticTerminationDisabled = true
     }
 
     private func endCriticalDictationActivity() {
         guard automaticTerminationDisabled else { return }
-        ProcessInfo.processInfo.enableAutomaticTermination("FreeFlow dictation in progress")
+        ProcessInfo.processInfo.enableAutomaticTermination("TellWell dictation in progress")
         automaticTerminationDisabled = false
     }
 

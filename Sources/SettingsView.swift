@@ -1082,7 +1082,7 @@ struct GeneralSettingsView: View {
             }
             .pickerStyle(.menu)
 
-            Text("When set, FreeFlow translates your speech into the selected language.")
+            Text("When set, TellWell translates your speech into the selected language.")
                 .font(.caption)
                 .foregroundStyle(.secondary)
         }
@@ -1831,7 +1831,7 @@ struct PromptsSettingsView: View {
             )
             .toggleStyle(.switch)
 
-            Text("When enabled, FreeFlow retries or falls back to the literal transcript if post-processing looks like it answered the dictated text instead of cleaning it.")
+            Text("When enabled, TellWell retries or falls back to the literal transcript if post-processing looks like it answered the dictated text instead of cleaning it.")
                 .font(.caption)
                 .foregroundStyle(.secondary)
         }
@@ -2023,7 +2023,7 @@ struct PromptsSettingsView: View {
 
             VStack(alignment: .leading, spacing: 8) {
                 Toggle("Allow full-desktop screenshot fallback", isOn: $appState.desktopScreenshotFallbackEnabled)
-                Text("When active-window capture fails, FreeFlow can capture the full desktop, including other apps, and send it to your configured context provider. Turn this off to continue without a screenshot when active-window capture fails. Applies to new context captures.")
+                Text("When active-window capture fails, TellWell can capture the full desktop, including other apps, and send it to your configured context provider. Turn this off to continue without a screenshot when active-window capture fails. Applies to new context captures.")
                     .font(.caption)
                     .foregroundStyle(.secondary)
             }
