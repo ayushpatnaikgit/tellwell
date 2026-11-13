@@ -31,6 +31,7 @@ struct SetupView: View {
     @State private var customVocabularyInput: String = ""
     @State private var engineStatus: LocalEngine.Status?
     @State private var engineChecked = false
+    @State private var holdKeyDetected = false
 
     // Test transcription state
     private enum TestPhase: Equatable {
@@ -442,13 +443,13 @@ struct SetupView: View {
         VStack(spacing: 20) {
             Image(systemName: "keyboard.fill")
                 .font(.system(size: 60))
-                .foregroundStyle(.blue)
+                .foregroundStyle(TellWellBrand.accent)
 
             Text("Hold to Talk Shortcut")
                 .font(.title)
                 .fontWeight(.bold)
 
-            Text("Choose the shortcut you want to hold while speaking.\nRelease it to stop unless you latch into tap mode later, or disable hold-to-talk entirely.")
+            Text("Choose the key you want to hold while speaking, then press it once to check it.")
                 .multilineTextAlignment(.center)
                 .foregroundStyle(.secondary)
                 .fixedSize(horizontal: false, vertical: true)
@@ -460,11 +461,19 @@ struct SetupView: View {
                 isCapturing: $isCapturingHoldShortcut,
                 onSelect: { binding in
                     holdShortcutValidationMessage = appState.setShortcut(binding, for: .hold)
+                    // Keep the default toggle (Command + hold key) on the same key when moving off Fn.
+                    if appState.toggleShortcut == .defaultToggle, !binding.usesFnKey, binding.kind == .modifierKey {
+                        _ = appState.setShortcut(binding.withAddedModifiers(.command), for: .toggle)
+                    }
                 }
             )
                 .padding(.top, 10)
 
-            if appState.holdShortcut.usesFnKey {
+            if appState.hasEnabledHoldShortcut {
+                holdKeyCheck
+            }
+
+            if appState.holdShortcut.usesFnKey, holdKeyDetected {
                 Text("Tip: If Fn opens Emoji picker, go to System Settings > Keyboard and change \"Press fn key to\" to \"Do Nothing\".")
                     .font(.caption)
                     .foregroundStyle(.orange)
@@ -472,6 +481,59 @@ struct SetupView: View {
             }
 
         }
+        .onAppear { startHoldKeyCheck() }
+        .onDisappear { testHotkeyHarness.stop() }
+        .onChange(of: appState.holdShortcut) { _ in
+            holdKeyDetected = false
+            startHoldKeyCheck()
+        }
+        .onChange(of: isCapturingHoldShortcut) { _ in startHoldKeyCheck() }
+    }
+
+    /// Confirms this Mac can see the chosen key before setup moves on. Some keyboards (many third-party ones) handle
+    /// their Fn key internally, so the default shortcut would silently never fire.
+    private var holdKeyCheck: some View {
+        VStack(spacing: 8) {
+            HStack(spacing: 8) {
+                Image(systemName: holdKeyDetected ? "checkmark.circle.fill" : "hand.tap")
+                    .foregroundStyle(holdKeyDetected ? Color.green : TellWellBrand.accent)
+                Text(holdKeyDetected
+                     ? "\(appState.holdShortcut.displayName) works on this keyboard."
+                     : "Press \(appState.holdShortcut.displayName) now to check it works on this keyboard.")
+                    .fontWeight(.medium)
+            }
+            .padding(.horizontal, 14)
+            .padding(.vertical, 10)
+            .frame(maxWidth: .infinity)
+            .background(RoundedRectangle(cornerRadius: 10).fill(Color(nsColor: .controlBackgroundColor).opacity(0.6)))
+
+            if !holdKeyDetected {
+                Text("Nothing happens? Some keyboards handle their Fn key themselves, so your Mac never sees it. Choose Right Option or another key above.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .multilineTextAlignment(.center)
+                    .fixedSize(horizontal: false, vertical: true)
+                Button("Continue without checking") {
+                    withAnimation { currentStep = nextStep(currentStep) }
+                }
+                .buttonStyle(.link)
+                .font(.caption)
+            }
+        }
+    }
+
+    private func startHoldKeyCheck() {
+        testHotkeyHarness.stop()
+        guard currentStep == .holdShortcut, appState.hasEnabledHoldShortcut, !isCapturingHoldShortcut else { return }
+        testHotkeyHarness.onAction = { action in
+            if case .start = action {
+                holdKeyDetected = true
+            }
+        }
+        try? testHotkeyHarness.start(configuration: ShortcutConfiguration(
+            hold: appState.holdShortcut,
+            toggle: appState.toggleShortcut
+        ), startDelay: 0)
     }
 
     var vocabularyStep: some View {
@@ -736,6 +798,8 @@ struct SetupView: View {
             return accessibilityGranted
         case .screenRecording:
             return appState.hasScreenRecordingPermission
+        case .holdShortcut:
+            return holdKeyDetected || !appState.hasEnabledHoldShortcut
         case .testTranscription:
             return testPhase == .done && !testTranscript.isEmpty && testError == nil
         default:
