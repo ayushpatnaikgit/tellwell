@@ -3,8 +3,157 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>TellWell — private dictation for your Mac</title>
-<meta name="description" content="Hold a key, speak, and clean text appears wherever you're typing. TellWell runs speech recognition and cleanup on your Mac, so your voice never leaves it.">
+<title>TellWell: Private, Context-Aware Dictation for Mac</title>
+<meta name="description" content="Free, open-source dictation for Mac that runs offline. Hold a key, speak, and clean text appears in any app. Context-aware: spells names from your screen.">
+<link rel="canonical" href="https://ayushpatnaikgit.github.io/tellwell/">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="TellWell">
+<meta property="og:url" content="https://ayushpatnaikgit.github.io/tellwell/">
+<meta property="og:title" content="TellWell: Private, Context-Aware Dictation for Mac">
+<meta property="og:description" content="Free, open-source dictation for Mac that runs offline. Hold a key, speak, and clean text appears in any app. Context-aware: spells names from your screen.">
+<meta property="og:image" content="https://ayushpatnaikgit.github.io/tellwell/og.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="TellWell: say it, and clean text appears. Private, context-aware dictation for Mac.">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="TellWell: Private, Context-Aware Dictation for Mac">
+<meta name="twitter:description" content="Free, open-source dictation for Mac that runs offline. Hold a key, speak, and clean text appears in any app. Context-aware: spells names from your screen.">
+<meta name="twitter:image" content="https://ayushpatnaikgit.github.io/tellwell/og.png">
+<meta name="author" content="Ayush Patnaik">
+<meta name="theme-color" content="#0b8a87">
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "SoftwareApplication",
+  "name": "TellWell",
+  "url": "https://ayushpatnaikgit.github.io/tellwell/",
+  "description": "TellWell is a free, open-source dictation app for Mac that runs entirely on your computer. Hold a key, speak, and clean, punctuated text appears in whatever app you're typing in. It is context-aware: it reads the names and terms on your screen, so it spells them right. Your voice, your words and your screen never leave your Mac.",
+  "applicationCategory": "UtilitiesApplication",
+  "applicationSubCategory": "Dictation",
+  "operatingSystem": "macOS 14 or later (Apple Silicon)",
+  "softwareVersion": "0.2.1",
+  "dateModified": "2026-11-13",
+  "isAccessibleForFree": true,
+  "license": "https://opensource.org/license/mit",
+  "offers": {
+    "@type": "Offer",
+    "price": "0",
+    "priceCurrency": "USD"
+  },
+  "downloadUrl": "https://ayushpatnaikgit.github.io/tellwell/#install",
+  "installUrl": "https://ayushpatnaikgit.github.io/tellwell/#install",
+  "image": "https://ayushpatnaikgit.github.io/tellwell/og.png",
+  "featureList": [
+    "Offline speech-to-text on the Apple Neural Engine",
+    "Context-aware: spells names and terms visible on your screen",
+    "Custom vocabulary",
+    "Removes filler words and applies spoken corrections",
+    "Works in any app; restores your clipboard",
+    "No account, subscription or API key"
+  ],
+  "author": {
+    "@type": "Person",
+    "name": "Ayush Patnaik",
+    "url": "https://github.com/ayushpatnaikgit"
+  },
+  "isBasedOn": {
+    "@type": "SoftwareApplication",
+    "name": "FreeFlow",
+    "url": "https://github.com/zachlatta/freeflow"
+  },
+  "sameAs": [
+    "https://github.com/ayushpatnaikgit/tellwell"
+  ]
+}
+</script>
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "FAQPage",
+  "mainEntity": [
+    {
+      "@type": "Question",
+      "name": "What is TellWell?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "TellWell is a free, open-source dictation app for Mac that runs entirely on your computer. Hold a key, speak, and clean, punctuated text appears in whatever app you're typing in. It is context-aware: it reads the names and terms on your screen, so it spells them right. Your voice, your words and your screen never leave your Mac."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "Does TellWell work offline?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Yes. Speech recognition and cleanup both run on your Mac, so dictation works without an internet connection. TellWell only goes online to install, to download its models once (about 2 GB), and to check GitHub for updates."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "What does context-aware dictation mean in TellWell?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "When you start dictating, TellWell reads the unusual words visible on your screen, such as names, product terms and code identifiers, using macOS's built-in text recognition on your Mac. It also uses your own vocabulary list. If a word you said sounds like one of them, it is spelled the way it appears on screen. Context only corrects mishearings: TellWell never inserts a word you didn't say."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "Is TellWell free?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Yes. TellWell is free and open source under the MIT licence. There is no account, no subscription and no API key."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "Which Macs does TellWell run on?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "An Apple Silicon Mac (M1 or later) running macOS 14 or later. Speech recognition runs on the Apple Neural Engine."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "Which apps does TellWell work in?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Any app with a text field: email, Slack and other chat apps, documents, browsers, code editors and terminals. TellWell pastes the text where your cursor is and restores your clipboard afterwards."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "How is TellWell different from macOS Dictation?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "macOS Dictation types the words it hears. TellWell also removes filler words, applies spoken corrections such as \"no wait, I mean\", adds punctuation, and uses the words on your screen to spell names correctly."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "Is TellWell a free alternative to Wispr Flow or Superwhisper?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "TellWell does the same kind of job as AI dictation apps like Wispr Flow and Superwhisper: hold a key, speak, and get clean text. TellWell is free and open source, and all of its processing happens on your Mac. Its cleanup model is built on Superwhisper's open S1-mini model."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "What languages does TellWell support?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "TellWell is tuned for English. Its cleanup model was trained on English dictation."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "Who makes TellWell?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "TellWell is made by Ayush Patnaik. It is a fork of FreeFlow, the open-source Mac dictation app by Zach Latta, and uses the freeflow-local engine for on-device speech recognition and cleanup."
+      }
+    }
+  ]
+}
+</script>
 <link rel="icon" href="favicon.svg" type="image/svg+xml">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -69,10 +218,28 @@
   .ba mark, .demo mark { background: color-mix(in srgb, var(--accent) 22%, transparent); color: var(--ink); border-radius: 4px; padding: 0 3px; }
   .note { background: var(--bg-soft); border: 1px solid var(--line); border-radius: 14px; padding: 16px 18px; font-size: 15px; color: var(--muted); max-width: 46em; margin-top: 24px; }
   footer { border-top: 1px solid var(--line); padding: 32px 0 48px; color: var(--muted); font-size: 14px; }
+  footer p { margin: 0 0 8px; }
+  .kicker { margin: 0 0 14px; font-size: 14px; font-weight: 600; letter-spacing: 0.6px; text-transform: uppercase; color: var(--accent); }
+  .answer { max-width: 44em; font-size: 18px; margin: 0 0 32px; }
+  ol.how { margin: 0; padding: 0; list-style: none; counter-reset: how; display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 16px; }
+  ol.how li { counter-increment: how; background: var(--card); border: 1px solid var(--line); border-radius: 16px; padding: 20px; font-size: 16px; color: var(--muted); }
+  ol.how li::before { content: counter(how); display: inline-flex; align-items: center; justify-content: center; width: 30px; height: 30px; margin-bottom: 10px; border-radius: 50%; background: var(--accent); color: var(--accent-ink); font-weight: 600; }
+  ol.how b { display: block; color: var(--ink); margin-bottom: 4px; }
+  .table-wrap { overflow-x: auto; border: 1px solid var(--line); border-radius: 16px; }
+  table { width: 100%; border-collapse: collapse; font-size: 16px; min-width: 560px; }
+  th, td { text-align: left; padding: 14px 18px; border-bottom: 1px solid var(--line); vertical-align: top; }
+  thead th { background: var(--bg-soft); font-weight: 600; }
+  tbody tr:last-child th, tbody tr:last-child td { border-bottom: 0; }
+  tbody th { font-weight: 500; color: var(--muted); width: 30%; }
+  .faq { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 18px 40px; max-width: 1040px; }
+  .faq h3 { margin-bottom: 6px; }
+  .faq p { margin: 0; color: var(--muted); font-size: 16px; }
   @media (max-width: 860px) {
     .hero { grid-template-columns: minmax(0, 1fr); padding-top: 24px; }
     .stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
     .grid { grid-template-columns: minmax(0, 1fr); }
+    ol.how { grid-template-columns: minmax(0, 1fr); }
+    .faq { grid-template-columns: minmax(0, 1fr); }
   }
 </style>
 </head>
@@ -84,8 +251,10 @@
       TellWell
     </a>
     <nav aria-label="Main">
-      <a href="#local">Fully local</a>
-      <a href="#setup">Install</a>
+      <a href="#context">Context-aware</a>
+      <a href="#how">How it works</a>
+      <a href="#faq">FAQ</a>
+      <a href="#install">Install</a>
       <a href="https://github.com/ayushpatnaikgit/tellwell">GitHub</a>
     </nav>
   </header>
@@ -93,13 +262,13 @@
   <main>
     <div class="hero">
       <div>
+        <p class="kicker">Private, context-aware dictation for Mac</p>
         <h1>Say it. TellWell writes it down well.</h1>
-        <p class="lede">Hold a key, speak, and clean, punctuated text appears wherever you're typing. Speech recognition and
-          cleanup run on your Mac, so your voice, your words and your screen never leave it.</p>
+        <p class="lede">TellWell is a free, open-source dictation app for Mac that runs entirely on your computer. Hold a key, speak, and clean, punctuated text appears in whatever app you&#x27;re typing in. It is context-aware: it reads the names and terms on your screen, so it spells them right. Your voice, your words and your screen never leave your Mac.</p>
         <p class="fine" style="margin: 0 0 8px">Install TellWell and its on-device engine with one command in Terminal:</p>
         <div class="cmd" style="margin: 0 0 20px"><code id="cmd-hero">curl -fsSL https://ayushpatnaikgit.github.io/tellwell/install.sh <span style="white-space: nowrap">| sh</span></code><button class="copy" type="button" data-copy="cmd-hero">Copy</button></div>
         <div class="cta">
-          <a class="btn" href="#setup">What it installs</a>
+          <a class="btn" href="#install">What it installs</a>
           <a class="btn" href="https://github.com/ayushpatnaikgit/tellwell">View source</a>
         </div>
         <p class="fine">Version 0.2.1 · Apple Silicon, macOS 14 or later · free and open source (MIT)</p>
@@ -117,8 +286,28 @@
       <div class="stat"><b>473 MB</b><span>cleanup model, fine-tuned for dictation</span></div>
     </div>
 
+    <section id="context">
+      <h2>Context-aware dictation: it knows the words on your screen.</h2>
+      <p class="answer">Speech recognition hears rare words as common ones: "Grafana" comes out as "graph Ana" and
+        "Siddhant" as "Sid hunt". TellWell fixes this with context. When you start dictating, it reads the unusual words
+        visible on your screen, such as names, product terms and code identifiers, using macOS's built-in text
+        recognition on your Mac. It also uses your own vocabulary list. When a word you said sounds like one of these,
+        the cleanup model spells it the way it appears on screen. Context is only used to correct a mishearing:
+        TellWell never inserts a word you didn't say, and words on screen that don't match anything you said are
+        ignored. Nothing it reads is stored, logged or sent anywhere. This matters most when your work is full of
+        names a speech model has never heard: colleagues, customers, products, libraries and commands.</p>
+      <div class="grid">
+        <div class="card"><h3>Words on your screen</h3><p>On by default once you allow Screen Recording. Read on your Mac
+          with macOS text recognition; only words that sound like something you said are used.</p></div>
+        <div class="card"><h3>Your vocabulary</h3><p>Add the names, jargon and project words you use in Settings. They
+          are used the same way: to fix a mishearing, never forced over what you said.</p></div>
+        <div class="card"><h3>Learns from your corrections</h3><p>Optional. When you fix a name TellWell typed, it can
+          remember the spelling for next time. Turn it on with <code>freeflowctl learn on</code>.</p></div>
+      </div>
+    </section>
+
     <section id="examples">
-      <h2>It types what you meant.</h2>
+      <h2>What you say, and what TellWell types.</h2>
       <p class="sub">Real outputs from TellWell's test suite with the default model.</p>
       <div class="grid">
         <div class="card"><h3>Cleans the ums out</h3><div class="ba"><div class="in"><small>YOU SAID</small>Can you, can you send me the, the slides from yesterday's talk?</div><div class="out"><small>TELLWELL TYPED</small>Can you send me the slides from yesterday's talk?</div></div></div>
@@ -131,21 +320,53 @@
       <p class="fine">In the last three, the right spelling was visible on screen or in the user's vocabulary.</p>
     </section>
 
+    <section id="how">
+      <h2>How does TellWell work?</h2>
+      <p class="sub">Five steps, all on your Mac, in well under a second for a typical sentence.</p>
+      <ol class="how">
+        <li><b>Hold your talk key</b>Hold Fn, Right Option or any key you choose, and speak. Release to finish.</li>
+        <li><b>Speech to text</b>Orukeet, a fine-tune of NVIDIA Parakeet, transcribes on the Apple Neural Engine in
+          about a tenth of a second.</li>
+        <li><b>Context</b>TellWell gathers the unusual words on your screen and your vocabulary.</li>
+        <li><b>Cleanup</b>A 0.6B model fine-tuned for dictation removes fillers, applies spoken corrections, fixes
+          misheard names and adds punctuation.</li>
+        <li><b>Paste</b>The text appears where your cursor is, and your clipboard is restored.</li>
+      </ol>
+    </section>
+
+    <section id="compare">
+      <h2>TellWell compared with cloud dictation</h2>
+      <p class="sub">Where the work happens decides what it costs, how fast it is and who sees your words.</p>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th scope="col"></th><th scope="col">TellWell</th><th scope="col">Cloud dictation apps</th></tr></thead>
+          <tbody>
+            <tr><th scope="row">Where your speech is processed</th><td>On your Mac (Apple Neural Engine)</td><td>On the provider's servers</td></tr>
+            <tr><th scope="row">Works offline</th><td>Yes</td><td>No</td></tr>
+            <tr><th scope="row">Screen context</th><td>Read on your Mac, never uploaded</td><td>If used, sent to the provider</td></tr>
+            <tr><th scope="row">Account or API key</th><td>None</td><td>Usually required</td></tr>
+            <tr><th scope="row">Price</th><td>Free, open source (MIT)</td><td>Usually a subscription</td></tr>
+            <tr><th scope="row">Time to text</th><td>About 0.2 s for a sentence (M4 Mac)</td><td>Depends on your connection</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
     <section id="local">
       <h2>Fully local, and fast because of it.</h2>
       <p class="sub">TellWell pairs with the freeflow-local engine. There is no upload and no queue: your Mac is the whole pipeline.</p>
       <div class="grid">
         <div class="card"><h3>Speech on the Neural Engine</h3><p>Orukeet, a multilingual fine-tune of NVIDIA Parakeet, runs on Apple's AI chip in about a tenth of a second.</p></div>
         <div class="card"><h3>Cleanup trained for dictation</h3><p>A 0.6B model built on Superwhisper's S1-mini removes fillers, applies "no wait, I mean" corrections, and never finishes a sentence you left unfinished.</p></div>
-        <div class="card"><h3>Spells your names right</h3><p>Words in your vocabulary or visible on screen are used only to fix a mishearing, never forced over what you said.</p></div>
+        <div class="card"><h3>Works offline</h3><p>Once installed, dictation needs no internet connection. It works on a plane, and it works when a cloud service is down.</p></div>
         <div class="card"><h3>Works in any app</h3><p>Email, chat, docs, terminals. It types what you said; it doesn't go off and write the email.</p></div>
         <div class="card"><h3>Private by design</h3><p>Audio, transcripts and screenshots stay on your Mac. Logs keep counts and timings, never your words.</p></div>
         <div class="card"><h3>Nothing to sign up for</h3><p>No account, no API key, no subscription. Install it and start talking.</p></div>
       </div>
     </section>
 
-    <section id="setup">
-      <h2>Install</h2>
+    <section id="install">
+      <h2>Install TellWell</h2>
       <p class="sub"><b>One command.</b> It installs TellWell after checking it against the release's published
         checksum, installs the on-device engine (models download once, about 2 GB), starts it at login and connects the two:</p>
       <div class="cmd"><code id="cmd">curl -fsSL https://ayushpatnaikgit.github.io/tellwell/install.sh <span style="white-space: nowrap">| sh</span></code><button class="copy" type="button" data-copy="cmd">Copy</button></div>
@@ -154,9 +375,28 @@
       <p class="note">TellWell is early. It installs alongside FreeFlow with its own settings and permissions. Run the command
         again to update, or let TellWell update itself from its GitHub releases. Your permissions carry over between updates.</p>
     </section>
+
+    <section id="faq">
+      <h2>Frequently asked questions</h2>
+      <div class="faq">
+        <div><h3>What is TellWell?</h3><p>TellWell is a free, open-source dictation app for Mac that runs entirely on your computer. Hold a key, speak, and clean, punctuated text appears in whatever app you&#x27;re typing in. It is context-aware: it reads the names and terms on your screen, so it spells them right. Your voice, your words and your screen never leave your Mac.</p></div>
+        <div><h3>Does TellWell work offline?</h3><p>Yes. Speech recognition and cleanup both run on your Mac, so dictation works without an internet connection. TellWell only goes online to install, to download its models once (about 2 GB), and to check GitHub for updates.</p></div>
+        <div><h3>What does context-aware dictation mean in TellWell?</h3><p>When you start dictating, TellWell reads the unusual words visible on your screen, such as names, product terms and code identifiers, using macOS&#x27;s built-in text recognition on your Mac. It also uses your own vocabulary list. If a word you said sounds like one of them, it is spelled the way it appears on screen. Context only corrects mishearings: TellWell never inserts a word you didn&#x27;t say.</p></div>
+        <div><h3>Is TellWell free?</h3><p>Yes. TellWell is free and open source under the MIT licence. There is no account, no subscription and no API key.</p></div>
+        <div><h3>Which Macs does TellWell run on?</h3><p>An Apple Silicon Mac (M1 or later) running macOS 14 or later. Speech recognition runs on the Apple Neural Engine.</p></div>
+        <div><h3>Which apps does TellWell work in?</h3><p>Any app with a text field: email, Slack and other chat apps, documents, browsers, code editors and terminals. TellWell pastes the text where your cursor is and restores your clipboard afterwards.</p></div>
+        <div><h3>How is TellWell different from macOS Dictation?</h3><p>macOS Dictation types the words it hears. TellWell also removes filler words, applies spoken corrections such as &quot;no wait, I mean&quot;, adds punctuation, and uses the words on your screen to spell names correctly.</p></div>
+        <div><h3>Is TellWell a free alternative to Wispr Flow or Superwhisper?</h3><p>TellWell does the same kind of job as AI dictation apps like Wispr Flow and Superwhisper: hold a key, speak, and get clean text. TellWell is free and open source, and all of its processing happens on your Mac. Its cleanup model is built on Superwhisper&#x27;s open S1-mini model.</p></div>
+        <div><h3>What languages does TellWell support?</h3><p>TellWell is tuned for English. Its cleanup model was trained on English dictation.</p></div>
+        <div><h3>Who makes TellWell?</h3><p>TellWell is made by Ayush Patnaik. It is a fork of FreeFlow, the open-source Mac dictation app by Zach Latta, and uses the freeflow-local engine for on-device speech recognition and cleanup.</p></div>
+      </div>
+    </section>
   </main>
 
   <footer>
+    <p>Made by <a href="https://github.com/ayushpatnaikgit">Ayush Patnaik</a>. Last updated
+      <time datetime="2026-11-13">13 November 2026</time>. A plain-text summary for AI assistants is at
+      <a href="llms.txt">llms.txt</a>.</p>
     TellWell is a fork of <a href="https://github.com/zachlatta/freeflow">FreeFlow</a> by Zach Latta and its contributors, MIT licence, and is not
     affiliated with or endorsed by the FreeFlow project. The local engine is <a href="https://github.com/ayushpatnaikgit/freeflow-local">freeflow-local</a>.
     Model licences: Orukeet CC BY-SA 4.0 (Oruk AI); the cleanup model is built on S1-mini by Superwhisper (Apache 2.0 plus a naming clause).

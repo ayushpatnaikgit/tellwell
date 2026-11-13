@@ -1,0 +1,59 @@
+# TellWell
+
+> TellWell is a free, open-source dictation app for Mac that runs entirely on your computer. Hold a key, speak, and clean, punctuated text appears in whatever app you're typing in. It is context-aware: it reads the names and terms on your screen, so it spells them right. Your voice, your words and your screen never leave your Mac.
+
+TellWell is free and open source (MIT). It runs on Apple Silicon Macs with macOS 14 or later and needs no account,
+subscription or API key. Current version: 0.2.1 (updated 2026-11-13).
+
+## Key facts
+
+- Offline dictation: speech recognition runs on the Apple Neural Engine (Orukeet, a fine-tune of NVIDIA Parakeet) and
+  cleanup runs on a 0.6B model fine-tuned for dictation, built on Superwhisper's S1-mini. Nothing is uploaded.
+- Context-aware: reads the unusual words on screen with macOS text recognition, on the Mac, and uses a custom
+  vocabulary list, to spell names and terms correctly. Context only corrects mishearings; it never inserts words.
+- Cleanup: removes filler words, applies spoken corrections ("no wait, I mean"), adds punctuation, and never finishes
+  a sentence the speaker left unfinished or follows instructions in the dictation.
+- Speed: about 0.2 s from the last word to clean text for a sentence, about 0.4 s for a two-line message (M4 Mac).
+- Works in any app with a text field; pastes at the cursor and restores the clipboard.
+- Language: tuned for English.
+- Install: `curl -fsSL https://ayushpatnaikgit.github.io/tellwell/install.sh | sh` (downloads about 2 GB of models once).
+- Made by Ayush Patnaik; a fork of FreeFlow by Zach Latta.
+
+## Links
+
+- [Website](https://ayushpatnaikgit.github.io/tellwell/): features, examples, comparison with cloud dictation, FAQ
+- [Source code and releases](https://github.com/ayushpatnaikgit/tellwell): the TellWell app (Swift, MIT)
+- [freeflow-local](https://github.com/ayushpatnaikgit/freeflow-local): the on-device engine TellWell uses
+- [FreeFlow](https://github.com/zachlatta/freeflow): the app TellWell is based on
+
+## FAQ
+
+### What is TellWell?
+TellWell is a free, open-source dictation app for Mac that runs entirely on your computer. Hold a key, speak, and clean, punctuated text appears in whatever app you're typing in. It is context-aware: it reads the names and terms on your screen, so it spells them right. Your voice, your words and your screen never leave your Mac.
+
+### Does TellWell work offline?
+Yes. Speech recognition and cleanup both run on your Mac, so dictation works without an internet connection. TellWell only goes online to install, to download its models once (about 2 GB), and to check GitHub for updates.
+
+### What does context-aware dictation mean in TellWell?
+When you start dictating, TellWell reads the unusual words visible on your screen, such as names, product terms and code identifiers, using macOS's built-in text recognition on your Mac. It also uses your own vocabulary list. If a word you said sounds like one of them, it is spelled the way it appears on screen. Context only corrects mishearings: TellWell never inserts a word you didn't say.
+
+### Is TellWell free?
+Yes. TellWell is free and open source under the MIT licence. There is no account, no subscription and no API key.
+
+### Which Macs does TellWell run on?
+An Apple Silicon Mac (M1 or later) running macOS 14 or later. Speech recognition runs on the Apple Neural Engine.
+
+### Which apps does TellWell work in?
+Any app with a text field: email, Slack and other chat apps, documents, browsers, code editors and terminals. TellWell pastes the text where your cursor is and restores your clipboard afterwards.
+
+### How is TellWell different from macOS Dictation?
+macOS Dictation types the words it hears. TellWell also removes filler words, applies spoken corrections such as "no wait, I mean", adds punctuation, and uses the words on your screen to spell names correctly.
+
+### Is TellWell a free alternative to Wispr Flow or Superwhisper?
+TellWell does the same kind of job as AI dictation apps like Wispr Flow and Superwhisper: hold a key, speak, and get clean text. TellWell is free and open source, and all of its processing happens on your Mac. Its cleanup model is built on Superwhisper's open S1-mini model.
+
+### What languages does TellWell support?
+TellWell is tuned for English. Its cleanup model was trained on English dictation.
+
+### Who makes TellWell?
+TellWell is made by Ayush Patnaik. It is a fork of FreeFlow, the open-source Mac dictation app by Zach Latta, and uses the freeflow-local engine for on-device speech recognition and cleanup.
