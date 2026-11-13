@@ -25,6 +25,8 @@ TEST_PRODUCTION_SOURCES = \
 	Sources/LLMCooldownManager.swift \
 	Sources/ModelConfiguration.swift \
 	Sources/OriginalFieldInsertionPreference.swift \
+	Sources/PipelineHistoryItem.swift \
+	Sources/PipelineHistoryStore.swift \
 	Sources/PostProcessingService.swift \
 	Sources/RecordingCaptureTiming.swift \
 	Sources/RecordingTimerPreference.swift \
@@ -133,6 +135,7 @@ test: $(TEST_CONTEXT_HARNESS) $(TEST_DISPATCH_HARNESS)
 validate:
 	plutil -lint Info.plist TellWell.entitlements
 	@set -e; for script in $(SHELL_SCRIPTS); do bash -n "$$script"; done
+	@cmp -s install.sh docs/install.sh || { echo "docs/install.sh must match install.sh (the website serves it)"; exit 1; }
 	@ruby -e 'require "yaml"; ARGV.each { |file| YAML.load_file(file) }' $(YAML_FILES)
 
 icon: $(ICON_ICNS)
