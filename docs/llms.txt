@@ -3,7 +3,7 @@
 > TellWell is a free, open-source dictation app for Mac that runs entirely on your computer. Hold a key, speak, and clean, punctuated text appears in whatever app you're typing in. It is context-aware: it reads the names and terms on your screen, so it spells them right. Your voice, your words and your screen never leave your Mac.
 
 TellWell is free and open source (MIT). It runs on Apple Silicon Macs with macOS 14 or later and needs no account,
-subscription or API key. Current version: 0.2.1 (updated 2026-11-13).
+subscription or API key. Current version: 0.2.2 (updated 2026-11-13).
 
 ## Key facts
 
