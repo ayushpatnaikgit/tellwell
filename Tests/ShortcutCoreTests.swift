@@ -22,6 +22,7 @@ enum ShortcutCoreTests {
         testLongHoldStopsImmediatelyWithDoubleTapEnabled()
         testToggleStartedSessionIgnoresHoldShortcut()
         testDoubleTapModifierChordThroughMatcher()
+        testSuggestedToggleForChosenHoldKey()
     }
 
     private static func testBareFnHoldLifecycle() {
@@ -456,5 +457,36 @@ enum ShortcutCoreTests {
             .switchedToToggle,
         ])
         TestSupport.expectEqual(controller.activeMode, .toggle)
+    }
+
+    /// Setup lets the user press any key as their talk key; the hands-free toggle must follow it and stay distinct.
+    /// A keyboard whose Fn key never reaches macOS (seen on a Keychron K8) cannot use the default Command + Fn.
+    private static func testSuggestedToggleForChosenHoldKey() {
+        func captured(_ keyCode: UInt16, _ name: String) -> ShortcutBinding {
+            ShortcutBinding(
+                keyCode: keyCode, keyDisplay: name, modifiers: [], kind: .modifierKey, preset: nil,
+                exactModifierKeyCodes: [keyCode]
+            )
+        }
+
+        let fn = captured(63, "Fn")
+        TestSupport.expect(fn.suggestedToggleForHold == .defaultToggle, "Fn keeps the default toggle")
+        TestSupport.expect(ShortcutBinding.defaultHold.suggestedToggleForHold == .defaultToggle,
+                           "The Fn preset keeps the default toggle")
+
+        let rightOption = captured(61, "Right Option")
+        let optionToggle = rightOption.suggestedToggleForHold
+        TestSupport.expectEqual(optionToggle.keyCode, 61)
+        TestSupport.expect(optionToggle.modifiers == [.command], "Right Option toggles with Command")
+        TestSupport.expect(!optionToggle.conflicts(with: rightOption), "Toggle must be distinct from hold")
+
+        let rightCommand = captured(54, "Right Command")
+        let commandToggle = rightCommand.suggestedToggleForHold
+        TestSupport.expectEqual(commandToggle.keyCode, 54)
+        TestSupport.expect(commandToggle.modifiers == [.option], "A Command key toggles with Option, not Command")
+        TestSupport.expect(!commandToggle.conflicts(with: rightCommand), "Toggle must be distinct from hold")
+
+        let f5 = ShortcutPreset.f5.binding
+        TestSupport.expect(f5.suggestedToggleForHold.modifiers == [.command], "A function key toggles with Command")
     }
 }

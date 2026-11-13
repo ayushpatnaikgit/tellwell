@@ -29,8 +29,12 @@ Mac dictation app. It keeps everything FreeFlow does and adds a focus on running
 recognition on the Apple Neural Engine and a small cleanup model fine-tuned for dictation, through the
 [freeflow-local](https://github.com/ayushpatnaikgit/freeflow-local) engine.
 
-**Status: early.** TellWell isn't signed with an Apple Developer ID yet; the one-line installer avoids macOS's
-"could not verify" prompt. TellWell installs alongside FreeFlow without sharing settings or permissions.
+**Status: early.** TellWell isn't signed with an Apple Developer ID; the one-line installer avoids macOS's
+"could not verify" prompt. From 0.2.1, releases are signed with a self-signed certificate (SHA-1
+`F37D1A1521D7E1871ED0CDEE2009D5636DA9ABD2`), so macOS recognises each update as the same app and your Microphone,
+Accessibility and Screen Recording permissions carry over. You can check a copy with
+`codesign -dr - /Applications/TellWell.app`. TellWell installs alongside FreeFlow without sharing settings or
+permissions.
 
 Thanks to Zach Latta and the FreeFlow contributors, including [@marcbodea](https://github.com/marcbodea) for
 maintaining FreeFlow. TellWell is not affiliated with or endorsed by the FreeFlow project.

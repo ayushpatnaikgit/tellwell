@@ -554,3 +554,15 @@ struct ShortcutBinding: Codable, Hashable, Identifiable, Equatable {
         (.function, "Fn 🌐", [(63, "Fn 🌐")])
     ]
 }
+
+extension ShortcutBinding {
+    /// The hands-free toggle that pairs with a hold key picked in setup: Command + the key, or Option + the key when
+    /// the key is itself a Command key. A bare Fn key keeps the default toggle (Command + Fn).
+    var suggestedToggleForHold: ShortcutBinding {
+        if kind == .modifierKey, keyCode == 63, modifiers.isEmpty {
+            return .defaultToggle
+        }
+        let isCommandKey = kind == .modifierKey && (keyCode == 54 || keyCode == 55)
+        return withAddedModifiers(isCommandKey ? .option : .command)
+    }
+}
