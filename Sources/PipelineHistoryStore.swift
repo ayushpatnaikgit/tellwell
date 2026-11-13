@@ -5,9 +5,18 @@ final class PipelineHistoryStore {
     private let container: NSPersistentContainer
     private let isStoreLoaded: Bool
 
-    init() {
+    /// `inMemory` keeps history for this session only, without touching disk.
+    init(inMemory: Bool = false) {
         let model = Self.makeModel()
         container = NSPersistentContainer(name: "PipelineHistory", managedObjectModel: model)
+
+        if inMemory {
+            let description = NSPersistentStoreDescription()
+            description.type = NSInMemoryStoreType
+            container.persistentStoreDescriptions = [description]
+            isStoreLoaded = Self.loadPersistentStoresSynchronously(container: container) == nil
+            return
+        }
 
         var storeURL: URL?
         if let appSupport = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first {

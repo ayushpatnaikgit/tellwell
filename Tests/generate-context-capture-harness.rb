@@ -2,7 +2,7 @@
 
 # Compile the production capture lifecycle with a synthetic context service.
 abort "usage: #{$PROGRAM_NAME} state-source settings-source output" unless ARGV.length == 3
-source_path, settings_path, output_path = ARGV
+source_path, _settings_path, output_path = ARGV
 lines = File.readlines(source_path)
 File.write(output_path, "// Generated from AppState.swift; do not edit.\nimport Foundation\n")
 
@@ -48,21 +48,4 @@ File.open(output_path, "a") do |file|
   SWIFT
   file.write(context_methods.join("\n"))
   file.write("\n}\n")
-end
-
-settings = File.read(settings_path)
-request_method = settings[/^    private func requestContextPromptTest\(\).*?^    }$/m]
-abort "missing context-test request method" unless request_method
-File.open(output_path, "a") do |file|
-  file.write(<<~SWIFT)
-
-  @MainActor final class TestContextPromptState {
-      let appState: TestContextState
-      var showContextTestConfirmation = false
-      var testRuns = 0
-      init(appState: TestContextState) { self.appState = appState }
-      func runContextPromptTest() { testRuns += 1 }
-  #{request_method.sub("private ", "")}
-  }
-  SWIFT
 end

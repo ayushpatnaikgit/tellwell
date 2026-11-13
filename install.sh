@@ -1,7 +1,7 @@
 #!/bin/sh
 # One-line installer for TellWell: private dictation that runs on your Mac.
 #
-#   curl -fsSL https://raw.githubusercontent.com/ayushpatnaikgit/tellwell/main/install.sh | sh
+#   curl -fsSL https://ayushpatnaikgit.github.io/tellwell/install.sh | sh
 #
 # Installs (or updates) TellWell from its latest GitHub release, after checking the release's SHA-256 and the app's
 # identifier; installs the freeflow-local engine (speech recognition on the Neural Engine and a fine-tuned cleanup

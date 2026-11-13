@@ -49,18 +49,6 @@ enum ContextCaptureTests {
 
         let disabled = TestContextState(defaults: defaults)
         disabled.contextCaptureEnabled = false
-        let promptTest = TestContextPromptState(appState: disabled)
-        promptTest.requestContextPromptTest()
-        TestSupport.expect(promptTest.showContextTestConfirmation,
-                           "A disabled-context prompt test must ask before capturing or sending anything")
-        TestSupport.expectEqual(promptTest.testRuns, 0)
-        disabled.contextCaptureEnabled = true
-        let enabledPromptTest = TestContextPromptState(appState: disabled)
-        enabledPromptTest.requestContextPromptTest()
-        TestSupport.expectEqual(enabledPromptTest.testRuns, 1)
-        TestSupport.expect(!enabledPromptTest.showContextTestConfirmation,
-                           "Enabled context tests should preserve the existing action")
-        disabled.contextCaptureEnabled = false
         disabled.startContextCapture()
         TestSupport.expect(disabled.contextCaptureTask == nil, "Disabled capture must not start a task")
         TestSupport.expectEqual(disabled.contextService.calls, 0)

@@ -22,9 +22,6 @@ struct PrecomputedMacro {
 
 enum SettingsTab: String, CaseIterable, Identifiable {
     case general
-    case prompts
-    case macros
-    case runLog
     case debug
 
     var id: String { rawValue }
@@ -38,9 +35,6 @@ enum SettingsTab: String, CaseIterable, Identifiable {
     var title: String {
         switch self {
         case .general: return "General"
-        case .prompts: return "Prompts"
-        case .macros: return "Voice Macros"
-        case .runLog: return "Run Log"
         case .debug: return "Debug"
         }
     }
@@ -48,9 +42,6 @@ enum SettingsTab: String, CaseIterable, Identifiable {
     var icon: String {
         switch self {
         case .general: return "gearshape"
-        case .prompts: return "text.bubble"
-        case .macros: return "music.mic"
-        case .runLog: return "clock.arrow.circlepath"
         case .debug: return "wrench.and.screwdriver"
         }
     }
@@ -660,7 +651,7 @@ final class AppState: ObservableObject, @unchecked Sendable {
     private var hasShownScreenshotPermissionAlert = false
     private var audioDeviceObservers: [NSObjectProtocol] = []
     private var needsMicrophoneRefreshAfterRecording = false
-    private let pipelineHistoryStore = PipelineHistoryStore()
+    private let pipelineHistoryStore = PipelineHistoryStore(inMemory: true)
     private let shortcutSessionController = DictationShortcutSessionController()
     private var doubleTapTimeoutWorkItem: DispatchWorkItem?
     private var shortcutCleanupSession = ShortcutCleanupSession()
@@ -692,14 +683,15 @@ final class AppState: ObservableObject, @unchecked Sendable {
     init() {
         UserDefaults.standard.removeObject(forKey: "force_http2_transcription")
         let hasCompletedSetup = UserDefaults.standard.bool(forKey: "hasCompletedSetup")
-        let apiKey = Self.loadStoredAPIKey(account: apiKeyStorageKey)
-        let apiBaseURL = Self.loadStoredAPIBaseURL(account: "api_base_url")
+        // TellWell always uses the engine on this Mac: no cloud provider, API key or realtime streaming.
+        let apiKey = LocalEngine.apiKey
+        let apiBaseURL = LocalEngine.baseURL
         for key in [contextModelStorageKey, postProcessingModelStorageKey, postProcessingFallbackModelStorageKey] {
             ModelConfiguration.migrateGroqSelection(key: key, baseURL: apiBaseURL, defaults: .standard)
         }
         let transcriptionModel = UserDefaults.standard.string(forKey: transcriptionModelStorageKey) ?? Self.defaultTranscriptionModel
-        let transcriptionAPIURL = Self.loadOptionalStoredAPIValue(account: transcriptionAPIURLStorageKey)
-        let transcriptionAPIKey = Self.loadStoredAPIKey(account: transcriptionAPIKeyStorageKey)
+        let transcriptionAPIURL = ""
+        let transcriptionAPIKey = ""
         let postProcessingModel = UserDefaults.standard.string(forKey: postProcessingModelStorageKey) ?? Self.defaultPostProcessingModel
         let postProcessingFallbackModel = Self.loadStoredPostProcessingFallbackModel(
             key: postProcessingFallbackModelStorageKey
@@ -726,28 +718,22 @@ final class AppState: ObservableObject, @unchecked Sendable {
         let transcriptionLanguage = Self.normalizeTranscriptionLanguage(
             UserDefaults.standard.string(forKey: transcriptionLanguageStorageKey) ?? ""
         )
-        let customSystemPrompt = UserDefaults.standard.string(forKey: customSystemPromptStorageKey) ?? ""
-        let customContextPrompt = UserDefaults.standard.string(forKey: customContextPromptStorageKey) ?? ""
+        let customSystemPrompt = ""
+        let customContextPrompt = ""
         let contextCaptureEnabled = UserDefaults.standard.object(forKey: contextCaptureEnabledStorageKey) == nil
             ? true
             : UserDefaults.standard.bool(forKey: contextCaptureEnabledStorageKey)
-        let instructionExecutionGuardEnabled = UserDefaults.standard.object(
-            forKey: instructionExecutionGuardEnabledStorageKey
-        ) == nil
-            ? true
-            : UserDefaults.standard.bool(forKey: instructionExecutionGuardEnabledStorageKey)
+        let instructionExecutionGuardEnabled = true
         let customSystemPromptLastModified = UserDefaults.standard.string(forKey: customSystemPromptLastModifiedStorageKey) ?? ""
         let customContextPromptLastModified = UserDefaults.standard.string(forKey: customContextPromptLastModifiedStorageKey) ?? ""
-        let outputLanguage = UserDefaults.standard.string(forKey: outputLanguageStorageKey) ?? ""
+        let outputLanguage = ""
         let storedContextScreenshotMaxDimension = UserDefaults.standard.object(forKey: contextScreenshotMaxDimensionStorageKey) != nil
             ? UserDefaults.standard.integer(forKey: contextScreenshotMaxDimensionStorageKey)
             : Self.defaultContextScreenshotMaxDimension
         let desktopScreenshotFallbackEnabled = DesktopScreenshotFallbackPreference.load(from: .standard)
         let contextScreenshotMaxDimension = Self.normalizedContextScreenshotMaxDimension(storedContextScreenshotMaxDimension)
         let shortcutStartDelay = max(0, UserDefaults.standard.double(forKey: shortcutStartDelayStorageKey))
-        let isCommandModeEnabled = UserDefaults.standard.object(forKey: commandModeEnabledStorageKey) == nil
-            ? false
-            : UserDefaults.standard.bool(forKey: commandModeEnabledStorageKey)
+        let isCommandModeEnabled = false
         let commandModeStyle = CommandModeStyle(
             rawValue: UserDefaults.standard.string(forKey: commandModeStyleStorageKey) ?? ""
         ) ?? .automatic
@@ -767,7 +753,7 @@ final class AppState: ObservableObject, @unchecked Sendable {
             key: ShortcutCleanupPreference.toggleStorageKey
         )
         let keepDictationInClipboardHistory = UserDefaults.standard.bool(forKey: keepDictationInClipboardHistoryStorageKey)
-        let realtimeStreamingEnabled = UserDefaults.standard.bool(forKey: realtimeStreamingEnabledStorageKey)
+        let realtimeStreamingEnabled = false
         let realtimeStreamingModel = UserDefaults.standard.string(forKey: realtimeStreamingModelStorageKey) ?? ""
         let dictationAudioInterruptionEnabled = UserDefaults.standard.bool(
             forKey: dictationAudioInterruptionEnabledStorageKey
@@ -781,13 +767,8 @@ final class AppState: ObservableObject, @unchecked Sendable {
             ? UserDefaults.standard.bool(forKey: alertSoundsEnabledStorageKey)
             : soundVolume > 0
         
-        let initialMacros: [VoiceMacro]
-        if let data = UserDefaults.standard.data(forKey: "voice_macros"),
-           let decoded = try? JSONDecoder().decode([VoiceMacro].self, from: data) {
-            initialMacros = decoded
-        } else {
-            initialMacros = []
-        }
+        let initialMacros: [VoiceMacro] = []
+        Self.removeStoredDictationHistory()
 
         let initialAccessibility = AXIsProcessTrusted()
         let initialScreenCapturePermission = CGPreflightScreenCaptureAccess()
@@ -1190,6 +1171,23 @@ final class AppState: ObservableObject, @unchecked Sendable {
     struct SavedAudioFile {
         let fileName: String
         let fileURL: URL
+    }
+
+    /// Deletes dictation history and recordings that earlier versions (and FreeFlow's Run Log) kept on disk.
+    private static func removeStoredDictationHistory() {
+        guard let appSupport = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first else {
+            return
+        }
+        let base = appSupport.appendingPathComponent(AppName.displayName, isDirectory: true)
+        for name in ["audio", "PipelineHistory.sqlite", "PipelineHistory.sqlite-wal", "PipelineHistory.sqlite-shm"] {
+            let url = base.appendingPathComponent(name)
+            if FileManager.default.fileExists(atPath: url.path) {
+                try? FileManager.default.removeItem(at: url)
+            }
+        }
+        for key in ["voice_macros", "custom_system_prompt", "custom_context_prompt", "output_language", "command_mode_enabled"] {
+            UserDefaults.standard.removeObject(forKey: key)
+        }
     }
 
     static func audioStorageDirectory() -> URL {
@@ -2885,7 +2883,7 @@ final class AppState: ObservableObject, @unchecked Sendable {
                 return
             }
 
-            let savedAudioFile = Self.saveAudioFile(from: fileURL)
+            let savedAudioFile: SavedAudioFile? = nil
             let transcriptionFileURL = savedAudioFile?.fileURL ?? fileURL
             self.transcribingAudioFileName = savedAudioFile?.fileName
             self.statusText = "Transcribing..."
@@ -3504,11 +3502,6 @@ final class AppState: ObservableObject, @unchecked Sendable {
             self.pendingOverlayDismissToken = nil
             self.overlayManager.dismiss()
         }
-    }
-
-    func toggleDebugPanel() {
-        selectedSettingsTab = .runLog
-        NotificationCenter.default.post(name: .showSettings, object: nil)
     }
 
     /// Delivers using the start-time mode and target; only definite non-insertion permits fallback paste.

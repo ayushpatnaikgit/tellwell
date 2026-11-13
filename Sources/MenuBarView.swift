@@ -41,11 +41,6 @@ struct MenuBarView: View {
         NSPasteboard.general.setString(transcript, forType: .string)
     }
 
-    private func openRunLog() {
-        appState.selectedSettingsTab = .runLog
-        NotificationCenter.default.post(name: .showSettings, object: nil)
-    }
-
     var body: some View {
         VStack(spacing: 4) {
             Text("\(AppName.displayName) v\(appVersion)")
@@ -169,12 +164,6 @@ struct MenuBarView: View {
                         }
                         .disabled(transcript.isEmpty)
                     }
-
-                    Divider()
-                }
-
-                Button("Open Run Log") {
-                    openRunLog()
                 }
             }
 
