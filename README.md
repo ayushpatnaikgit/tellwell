@@ -10,8 +10,18 @@
 
 <p align="center">
   <a href="https://ayushpatnaikgit.github.io/tellwell/">Website</a> ·
-  <a href="https://github.com/ayushpatnaikgit/tellwell/releases/download/v0.1.0/TellWell.dmg"><b>Download TellWell.dmg (0.1.0, pre-release)</b></a>
+  <a href="https://github.com/ayushpatnaikgit/tellwell/releases/latest/download/TellWell.dmg">Download TellWell.dmg</a>
 </p>
+
+Install TellWell and its on-device engine (Apple Silicon, macOS 14+) with one command:
+
+```sh
+curl -fsSL https://raw.githubusercontent.com/ayushpatnaikgit/tellwell/main/install.sh | sh
+```
+
+It checks the app against the release's published SHA-256, installs the
+[freeflow-local](https://github.com/ayushpatnaikgit/freeflow-local) engine, starts it at login and connects the two.
+Run it again to update.
 
 ---
 
@@ -20,8 +30,9 @@ Mac dictation app. It keeps everything FreeFlow does and adds a focus on running
 recognition on the Apple Neural Engine and a small cleanup model fine-tuned for dictation, through the
 [freeflow-local](https://github.com/ayushpatnaikgit/freeflow-local) engine.
 
-**Status: early.** The 0.1.0 pre-release isn't signed with an Apple Developer ID yet: after the first launch,
-allow it in System Settings → Privacy & Security → Open Anyway. TellWell installs alongside FreeFlow without sharing
+**Status: early.** TellWell isn't signed with an Apple Developer ID yet. The one-line installer avoids the
+"could not verify" prompt; if you download the DMG instead, allow it once in System Settings → Privacy & Security →
+Open Anyway. TellWell installs alongside FreeFlow without sharing
 settings or permissions.
 
 Thanks to Zach Latta and the FreeFlow contributors, including [@marcbodea](https://github.com/marcbodea) for
@@ -39,7 +50,7 @@ The rest of this README describes the features TellWell inherits from FreeFlow.
 
 ## Quick Start
 
-1. Download [TellWell.dmg](https://github.com/ayushpatnaikgit/tellwell/releases/download/v0.1.0/TellWell.dmg) (or build from source)
+1. Install with the one-line command above, or download [TellWell.dmg](https://github.com/ayushpatnaikgit/tellwell/releases/latest/download/TellWell.dmg)
 2. Get a free Groq API key from [groq.com](https://groq.com/)
 3. Hold `Fn` to talk, or tap `Command-Fn` to start and stop dictation, and have whatever you say pasted into the current text field
 

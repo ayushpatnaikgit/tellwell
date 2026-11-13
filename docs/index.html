@@ -58,6 +58,12 @@
   .cmd { display: flex; align-items: center; gap: 10px; background: var(--code); color: var(--code-ink); border-radius: 12px; padding: 12px 12px 12px 16px; margin-top: 10px; overflow-x: auto; }
   .cmd code { font: 14px/1.5 ui-monospace, SFMono-Regular, Menlo, monospace; white-space: nowrap; flex: 1; }
   .copy { flex: none; min-height: 36px; padding: 6px 14px; border-radius: 8px; border: 0; background: var(--accent); color: var(--accent-ink); font: 600 14px Inter, sans-serif; cursor: pointer; }
+  .ba { display: flex; flex-direction: column; gap: 8px; margin-top: 12px; }
+  .ba .in, .ba .out { border-radius: 10px; padding: 10px 12px; font-size: 15px; line-height: 1.5; }
+  .ba .in { background: var(--bg-soft); color: var(--muted); }
+  .ba .out { border: 1px solid var(--line); }
+  .ba small { display: block; font-size: 11px; font-weight: 600; letter-spacing: 0.5px; color: var(--muted); margin-bottom: 2px; }
+  .ba mark, .demo mark { background: color-mix(in srgb, var(--accent) 22%, transparent); color: var(--ink); border-radius: 4px; padding: 0 3px; }
   .note { background: var(--bg-soft); border: 1px solid var(--line); border-radius: 14px; padding: 16px 18px; font-size: 15px; color: var(--muted); max-width: 46em; margin-top: 24px; }
   footer { border-top: 1px solid var(--line); padding: 32px 0 48px; color: var(--muted); font-size: 14px; }
   @media (max-width: 860px) {
@@ -87,11 +93,13 @@
         <h1>Say it. TellWell writes it down well.</h1>
         <p class="lede">Hold a key, speak, and clean, punctuated text appears wherever you're typing. Speech recognition and
           cleanup run on your Mac, so your voice, your words and your screen never leave it.</p>
+        <p class="fine" style="margin: 0 0 8px">Install TellWell and its on-device engine with one command in Terminal:</p>
+        <div class="cmd" style="margin: 0 0 18px"><code id="cmd-hero">curl -fsSL https://raw.githubusercontent.com/ayushpatnaikgit/tellwell/main/install.sh | sh</code><button class="copy" type="button" data-copy="cmd-hero">Copy</button></div>
         <div class="cta">
-          <a class="btn primary" href="https://github.com/ayushpatnaikgit/tellwell/releases/download/v0.1.0/TellWell.dmg">Download for Mac</a>
+          <a class="btn" href="#setup">Other ways to install</a>
           <a class="btn" href="https://github.com/ayushpatnaikgit/tellwell">View source</a>
         </div>
-        <p class="fine">Version 0.1.0, pre-release · Apple Silicon and Intel · macOS 13 or later · free and open source (MIT)</p>
+        <p class="fine">Version 0.1.0 · Apple Silicon, macOS 14 or later · free and open source (MIT)</p>
       </div>
       <div class="demo" aria-label="Example of a dictation being cleaned up">
         <div class="row"><small>YOU SAID</small>um so lets meet at five <s>no wait</s> six on thursday and loop in the <s>graph Ana</s> dashboard team</div>
@@ -105,6 +113,20 @@
       <div class="stat"><b>0 bytes</b><span>of your voice, text or screen sent anywhere</span></div>
       <div class="stat"><b>473 MB</b><span>cleanup model, fine-tuned for dictation</span></div>
     </div>
+
+    <section id="examples">
+      <h2>It types what you meant.</h2>
+      <p class="sub">Real outputs from TellWell's test suite with the default model.</p>
+      <div class="grid">
+        <div class="card"><h3>Cleans the ums out</h3><div class="ba"><div class="in"><small>YOU SAID</small>Can you, can you send me the, the slides from yesterday's talk?</div><div class="out"><small>TELLWELL TYPED</small>Can you send me the slides from yesterday's talk?</div></div></div>
+        <div class="card"><h3>Speaks developer</h3><div class="ba"><div class="in"><small>YOU SAID</small>Use kubectl get pods dash n staging to check if the OAuth proxy restarted.</div><div class="out"><small>TELLWELL TYPED</small>Use kubectl get pods <mark>-n</mark> staging to check if the OAuth proxy restarted.</div></div></div>
+        <div class="card"><h3>Never takes orders</h3><div class="ba"><div class="in"><small>YOU SAID</small>write an email to the team saying the release is delayed until monday</div><div class="out"><small>TELLWELL TYPED</small>Write an email to the team saying the release is delayed until Monday.</div></div><p style="margin-top: 10px">It types what you said. It doesn't go off and write the email.</p></div>
+        <div class="card"><h3>Names from your screen</h3><div class="ba"><div class="in"><small>YOU SAID</small>Ask Sid hunt to check the graph Ana dashboard.</div><div class="out"><small>TELLWELL TYPED</small>Ask <mark>Siddhant</mark> to check the <mark>Grafana</mark> dashboard.</div></div></div>
+        <div class="card"><h3>Even mid-correction</h3><div class="ba"><div class="in"><small>YOU SAID</small>We should use parakeet, no actually, or a keet for the speech model.</div><div class="out"><small>TELLWELL TYPED</small>We should use <mark>Orukeet</mark> for the speech model.</div></div></div>
+        <div class="card"><h3>Even the long ones</h3><div class="ba"><div class="in"><small>YOU SAID</small>The Tiruchi rapalli office needs six new laptops.</div><div class="out"><small>TELLWELL TYPED</small>The <mark>Tiruchirappalli</mark> office needs six new laptops.</div></div></div>
+      </div>
+      <p class="fine">In the last three, the right spelling was visible on screen or in the user's vocabulary.</p>
+    </section>
 
     <section id="local">
       <h2>Fully local, and fast because of it.</h2>
@@ -121,16 +143,21 @@
 
     <section id="setup">
       <h2>Install</h2>
+      <p class="sub"><b>One command</b> (recommended). It installs TellWell after checking it against the release's published
+        checksum, installs the on-device engine (models download once, about 2 GB), starts it at login and connects the two:</p>
+      <div class="cmd" style="max-width: 46em"><code id="cmd">curl -fsSL https://raw.githubusercontent.com/ayushpatnaikgit/tellwell/main/install.sh | sh</code><button class="copy" type="button" data-copy="cmd">Copy</button></div>
+      <p class="sub" style="margin-top: 16px">Then open TellWell, allow <b>Microphone</b> and <b>Accessibility</b> (and Screen Recording if you
+        want on-screen names spelled right), hold your dictation key and speak. Run the same command again to update.</p>
+      <h3 style="margin-top: 36px">Or download the app</h3>
       <ol class="steps">
-        <li><b>Download TellWell</b> and drag it into Applications.</li>
+        <li><a href="https://github.com/ayushpatnaikgit/tellwell/releases/latest/download/TellWell.dmg">Download TellWell.dmg</a> and drag TellWell into Applications.</li>
         <li><b>Open it once.</b> This early build isn't signed with an Apple Developer ID yet, so macOS stops the first launch:
           go to <b>System Settings → Privacy &amp; Security</b> and click <b>Open Anyway</b>.</li>
-        <li><b>Allow Microphone and Accessibility</b> (and Screen Recording if you want on-screen names spelled right).</li>
-        <li><b>Install the local engine</b> (Apple Silicon; models download once, about 2 GB):
-          <div class="cmd"><code id="cmd">curl -fsSL https://raw.githubusercontent.com/ayushpatnaikgit/freeflow-local/main/get.sh | sh -s -- --no-freeflow</code><button class="copy" type="button" data-copy="cmd">Copy</button></div></li>
-        <li><b>Point TellWell at it:</b> in TellWell's settings, set the API base URL to <code>http://127.0.0.1:8081/v1</code> and type any API key, for example <code>local</code>.</li>
+        <li><b>For the on-device engine,</b> run <code>curl -fsSL https://raw.githubusercontent.com/ayushpatnaikgit/freeflow-local/main/get.sh | sh -s -- --app tellwell</code>.
+          Without it, TellWell works like FreeFlow with a cloud service such as Groq.</li>
       </ol>
-      <p class="note">TellWell is early. It installs alongside FreeFlow with its own settings and permissions. Updates arrive through the app; signed releases and automatic engine setup are next.</p>
+      <p class="note">TellWell is early. It installs alongside FreeFlow with its own settings and permissions, and updates itself
+        from its GitHub releases. Signed releases come next.</p>
     </section>
   </main>
 
