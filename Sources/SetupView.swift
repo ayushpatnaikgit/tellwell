@@ -453,7 +453,7 @@ struct SetupView: View {
                 .font(.title)
                 .fontWeight(.bold)
 
-            Text("Press the key you want to hold while you speak. A key next to the space bar works well, such as Fn, Right Option or Right Command.")
+            Text("Press and hold the key you want to use while you speak. A key next to the space bar works well, such as Fn, Right Option or Right Command.")
                 .multilineTextAlignment(.center)
                 .foregroundStyle(.secondary)
                 .fixedSize(horizontal: false, vertical: true)
@@ -1027,7 +1027,11 @@ private struct TalkKeyPicker: View {
 
     @State private var backend: LocalShortcutCaptureBackend?
     @State private var pressedModifiers: Set<UInt16> = []
+    @State private var pendingChoice: DispatchWorkItem?
     @State private var pulsing = false
+
+    /// A modifier counts once it has been held on its own this long, so the Command in Command-Tab isn't picked up.
+    private static let holdToChoose: TimeInterval = 0.3
 
     private static let functionKeyCodes: Set<UInt16> = [
         122, 120, 99, 118, 96, 97, 98, 100, 101, 109, 103, 111, 105, 107, 113, 106, 64, 79, 80, 90
@@ -1043,7 +1047,7 @@ private struct TalkKeyPicker: View {
                     .font(.caption)
                     .foregroundStyle(.secondary)
             } else {
-                Label("Press a key now", systemImage: "hand.tap")
+                Label("Press and hold a key now", systemImage: "hand.tap")
                     .font(.system(size: 22, weight: .semibold, design: .rounded))
                     .foregroundStyle(TellWellBrand.accent)
                     .opacity(pulsing ? 0.55 : 1)
@@ -1065,6 +1069,8 @@ private struct TalkKeyPicker: View {
             start()
         }
         .onDisappear {
+            pendingChoice?.cancel()
+            pendingChoice = nil
             backend?.stop()
             backend = nil
         }
@@ -1076,20 +1082,28 @@ private struct TalkKeyPicker: View {
         let capture = LocalShortcutCaptureBackend()
         capture.onInputEvent = { event in
             guard case .modifierChanged(let keyCode, let isDown) = event else { return }
+            pendingChoice?.cancel()
+            pendingChoice = nil
             if isDown {
                 pressedModifiers.insert(keyCode)
-                // One modifier on its own: that is the talk key.
-                if pressedModifiers == [keyCode],
-                   let binding = ShortcutBinding.fromModifierKeyCode(
-                       keyCode, pressedModifierKeyCodes: [keyCode], allowBareModifier: true
-                   ) {
+                guard pressedModifiers == [keyCode] else { return }
+                let work = DispatchWorkItem {
+                    // Still held, still alone, and the user hasn't switched away: that is the talk key.
+                    guard pressedModifiers == [keyCode], NSApp.isActive,
+                          let binding = ShortcutBinding.fromModifierKeyCode(
+                              keyCode, pressedModifierKeyCodes: [keyCode], allowBareModifier: true
+                          ) else { return }
                     onChoose(binding)
                 }
+                pendingChoice = work
+                DispatchQueue.main.asyncAfter(deadline: .now() + Self.holdToChoose, execute: work)
             } else {
                 pressedModifiers.remove(keyCode)
             }
         }
         capture.onKeyDownEvent = { event in
+            pendingChoice?.cancel()
+            pendingChoice = nil
             if event.keyCode == 36 || event.keyCode == 76 {  // Return or Enter: continue
                 onConfirm()
                 return
