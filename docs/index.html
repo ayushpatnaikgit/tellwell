@@ -326,7 +326,7 @@
   (function () {
     if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
     var SCENES = [{"app": "Mail", "label": "To: team", "ctx": "Seen on screen: Grafana", "tokens": [["um", ""], ["so", ""], ["let's", "Let's"], ["meet", "meet"], ["at", "at"], ["five", ""], ["no", ""], ["wait", ""], ["six", "6"], ["on", "on"], ["thursday", "Thursday"], ["and", "and"], ["loop", "loop"], ["in", "in"], ["the", "the"], ["graph ana", "Grafana", "ctx"], ["dashboard", "dashboard"], ["team", "team."]]}, {"app": "Messages", "label": "To: Priya", "ctx": null, "tokens": [["can", "Can"], ["you", "you"], ["can", ""], ["you", ""], ["send", "send"], ["me", "me"], ["the", "the"], ["the", ""], ["slides", "slides"], ["from", "from"], ["yesterday's", "yesterday's"], ["talk", "talk?"]]}, {"app": "Notes", "label": "Deploy checklist", "ctx": "Seen on screen: OAuth", "tokens": [["use", "Use"], ["kubectl", "kubectl"], ["get", "get"], ["pods", "pods"], ["dash n", "-n", "ctx"], ["staging", "staging"], ["to", "to"], ["check", "check"], ["if", "if"], ["the", "the"], ["oauth", "OAuth", "ctx"], ["proxy", "proxy"], ["restarted", "restarted."]]}];
-    var stage = document.getElementById("stage"), win = document.getElementById("win"), key = document.getElementById("key");
+    var stage = document.getElementById("stage"), key = document.getElementById("key");
     var field = document.getElementById("field"), app = document.getElementById("app"), label = document.getElementById("label");
     var ctx = document.getElementById("ctx");
     function wait(ms) { return new Promise(function (r) { setTimeout(r, ms); }); }
@@ -364,14 +364,6 @@
     async function loop() { for (var n = 0; ; n = (n + 1) % SCENES.length) await play(SCENES[n]); }
     loop();
 
-    // Scroll flattens the window.
-    function tilt() {
-      var r = stage.getBoundingClientRect(), p = Math.min(1, Math.max(0, (window.innerHeight - r.top) / (window.innerHeight + r.height)));
-      var flat = Math.min(1, Math.max(0, (p - 0.2) / 0.45));
-      win.style.setProperty("--rx", (24 * (1 - flat)).toFixed(2) + "deg");
-      win.style.setProperty("--ry", (0 * (1 - flat)).toFixed(2) + "deg");
-    }
-    if (window.innerWidth > 900) { window.addEventListener("scroll", function () { requestAnimationFrame(tilt); }, { passive: true }); tilt(); }
   })();
 </script>
 </body>
