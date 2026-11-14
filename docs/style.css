@@ -227,3 +227,7 @@ dialog#film video { display: block; width: 100%; height: auto; border-radius: 16
 dialog#film p { position: absolute; left: 0; right: 0; bottom: -40px; margin: 0; text-align: center; font-size: 14px; color: #cfd6de; }
 dialog#film p a { color: #cfd6de; }
 dialog#film .close { position: absolute; right: -6px; top: -46px; width: 36px; height: 36px; border-radius: 50%; border: 0; background: rgba(255,255,255,0.14); color: #fff; font-size: 16px; cursor: pointer; }
+.hero-actions { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; margin-top: 22px; }
+.hero-actions .watch { margin: 0; text-decoration: none; }
+.watch.star span[aria-hidden] { background: transparent; color: #e3a008; font-size: 18px; width: 22px; padding: 0; }
+.star-ask { margin-top: 22px; padding-top: 18px; border-top: 1px solid var(--line); }

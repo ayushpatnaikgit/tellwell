@@ -22,6 +22,8 @@ It checks the app against the release's published SHA-256, installs the
 [freeflow-local](https://github.com/ayushpatnaikgit/freeflow-local) engine, starts it at login and connects the two.
 Run it again to update.
 
+TellWell is free. If it helps you, a star on GitHub helps other people find it.
+
 ---
 
 TellWell is a fork of [FreeFlow](https://github.com/zachlatta/freeflow) by Zach Latta, the free and open-source
