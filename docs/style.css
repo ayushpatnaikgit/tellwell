@@ -215,3 +215,8 @@ footer p { margin: 0 0 8px; }
 }
 .hero .cta { justify-content: center; margin-bottom: 8px; }
 .hero .demo { margin-top: 36px; width: 100%; max-width: 560px; text-align: left; }
+
+/* The film */
+.film { text-align: center; }
+.film video { display: block; width: 100%; max-width: 960px; height: auto; margin: 8px auto 0; border-radius: 14px; box-shadow: var(--shadow); background: #000; }
+.film .fine { margin-top: 14px; }
