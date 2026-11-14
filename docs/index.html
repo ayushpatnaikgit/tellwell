@@ -163,10 +163,7 @@
 <body>
 <div class="wrap">
   <header class="bar">
-    <a class="brand" href="./" aria-label="TellWell home">
-      <svg width="30" height="30" viewBox="10 8 82 86" aria-hidden="true"><rect class="mark-bar" x="12" y="24" width="9" height="12" rx="4.5"/><rect class="mark-bar" x="25" y="19" width="9" height="22" rx="4.5"/><rect class="mark-bar" x="38" y="14" width="9" height="32" rx="4.5"/><rect class="mark-stem" x="51" y="10" width="9" height="82" rx="4.5"/><rect class="mark-bar" x="64" y="14" width="9" height="32" rx="4.5"/><rect class="mark-bar" x="77" y="19" width="9" height="22" rx="4.5"/></svg>
-      TellWell
-    </a>
+    <a class="brand" href="./" aria-label="TellWell home"><svg width="28" height="28" viewBox="10 8 82 86" aria-hidden="true"><rect class="mark-bar" x="12" y="24" width="9" height="12" rx="4.5"/><rect class="mark-bar" x="25" y="19" width="9" height="22" rx="4.5"/><rect class="mark-bar" x="38" y="14" width="9" height="32" rx="4.5"/><rect class="mark-stem" x="51" y="10" width="9" height="82" rx="4.5"/><rect class="mark-bar" x="64" y="14" width="9" height="32" rx="4.5"/><rect class="mark-bar" x="77" y="19" width="9" height="22" rx="4.5"/></svg>TellWell</a>
     <nav aria-label="Main">
       <a href="#context">Context-aware</a>
       <a href="#how">How it works</a>
@@ -178,83 +175,89 @@
 
   <main>
     <div class="hero">
-      <div>
-        <p class="kicker">Free, private, context-aware dictation for Mac</p>
-        <h1>Say it. TellWell writes it down well.</h1>
-        <p class="lede">TellWell is a free, open-source dictation app for Mac that runs entirely on your computer. Hold a key, speak, and clean, punctuated text appears in whatever app you&#x27;re typing in. It is context-aware: it reads the names and terms on your screen, so it spells them right. Your voice, your words and your screen never leave your Mac.</p>
-        <p class="fine" style="margin: 0 0 8px">Install TellWell and its on-device engine with one command in Terminal:</p>
-        <div class="cmd" style="margin: 0 0 20px"><code id="cmd-hero">curl -fsSL https://ayushpatnaikgit.github.io/tellwell/install.sh <span style="white-space: nowrap">| sh</span></code><button class="copy" type="button" data-copy="cmd-hero">Copy</button></div>
-        <div class="cta">
-          <a class="btn" href="wispr-flow-alternative/">Compare with Wispr Flow</a>
-          <a class="btn" href="https://github.com/ayushpatnaikgit/tellwell">View source on GitHub</a>
-        </div>
-        <p class="fine">Version 0.2.2 · Apple Silicon, macOS 14 or later · free and open source (MIT)</p>
-      </div>
-      <div class="demo" aria-label="Example of a dictation being cleaned up">
-        <div class="row"><small>YOU SAID</small>um so lets meet at five <s>no wait</s> six on thursday and loop in the <s>graph Ana</s> dashboard team</div>
-        <div class="row"><small>TELLWELL TYPED</small>Let's meet at 6 on Thursday and loop in the <mark>Grafana</mark> dashboard team.</div>
-      </div>
-    </div>
+      <p class="eyebrow"><b>Free</b>, private, context-aware dictation for Mac</p>
+      <h1>Say it. TellWell writes it down well.</h1>
+      <p class="lede">Hold a key, speak, and clean, punctuated text appears in any app, spelled the way it is on your screen.
+        Free and open source, and it runs entirely on your Mac.</p>
+      <div class="cmd"><code id="cmd-hero">curl -fsSL https://ayushpatnaikgit.github.io/tellwell/install.sh <span style="white-space: nowrap">| sh</span></code><button class="copy" type="button" data-copy="cmd-hero">Copy</button></div>
+      <p class="fine">Version 0.2.2 · Apple Silicon, macOS 14 or later · MIT licence ·
+        <a href="wispr-flow-alternative/">compare with Wispr Flow</a> · <a href="https://github.com/ayushpatnaikgit/tellwell">source</a></p>
 
-    <div class="stats">
-      <div class="stat"><b>~0.2 s</b><span>from your last word to clean text, for a sentence</span></div>
-      <div class="stat"><b>~0.4 s</b><span>for a two-line message, end to end</span></div>
-      <div class="stat"><b>0 bytes</b><span>of your voice, text or screen sent anywhere</span></div>
-      <div class="stat"><b>473 MB</b><span>cleanup model, fine-tuned for dictation</span></div>
+      <div class="stage" id="stage" aria-label="Animated example: a spoken sentence is cleaned up as it is typed">
+        <div class="window" id="win">
+          <div class="titlebar"><span class="dots"><i></i><i></i><i></i></span><span id="app">Mail</span></div>
+          <div class="field-label" id="label">To: team</div>
+          <div class="field" id="field"><span class="clean">Let&#x27;s meet at 6 on Thursday and loop in the <mark>Grafana</mark> dashboard team.</span></div>
+          <div class="statusbar"><span class="wave" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i></span><span class="ctx-tag" id="ctx"></span></div>
+        </div>
+        <div class="key" id="key" aria-hidden="true"><span>hold to talk</span><span class="glyph">fn</span></div>
+      </div>
     </div>
 
     <section id="context">
-      <h2>Context-aware dictation: it knows the words on your screen.</h2>
-      <p class="answer">Speech recognition hears rare words as common ones: "Grafana" comes out as "graph Ana" and
-        "Siddhant" as "Sid hunt". TellWell fixes this with context. When you start dictating, it reads the unusual words
-        visible on your screen, such as names, product terms and code identifiers, using macOS's built-in text
-        recognition on your Mac. It also uses your own vocabulary list. When a word you said sounds like one of these,
-        the cleanup model spells it the way it appears on screen. Context is only used to correct a mishearing:
-        TellWell never inserts a word you didn't say, and words on screen that don't match anything you said are
-        ignored. Nothing it reads is stored, logged or sent anywhere. This matters most when your work is full of
-        names a speech model has never heard: colleagues, customers, products, libraries and commands.</p>
-      <div class="grid">
-        <div class="card"><h3>Words on your screen</h3><p>On by default once you allow Screen Recording. Read on your Mac
-          with macOS text recognition; only words that sound like something you said are used.</p></div>
-        <div class="card"><h3>Your vocabulary</h3><p>Add the names, jargon and project words you use in Settings. They
-          are used the same way: to fix a mishearing, never forced over what you said.</p></div>
-        <div class="card"><h3>Learns from your corrections</h3><p>Optional. When you fix a name TellWell typed, it can
-          remember the spelling for next time. Turn it on with <code>freeflowctl learn on</code>.</p></div>
+      <div class="split">
+        <div class="prose">
+          <h2>Context-aware: it spells what's on your screen.</h2>
+          <p class="lead">Speech recognition hears rare words as common ones. "Grafana" comes out as "graph Ana", and
+            "Siddhant" as "Sid hunt".</p>
+          <p>When you start dictating, TellWell reads the unusual words on your screen, such as names, product terms and
+            code identifiers, using macOS's built-in text recognition on your Mac. It also uses your own vocabulary list.
+            When a word you said sounds like one of these, it is spelled the way it appears on screen.</p>
+          <p>Context only corrects a mishearing. TellWell never inserts a word you didn't say, words on screen that don't
+            match anything you said are ignored, and nothing it reads is stored or sent anywhere.</p>
+        </div>
+        <ul class="pairs" aria-label="Examples from TellWell's test suite">
+          <li><p class="said">Ask Sid hunt to check the graph Ana dashboard.</p><p class="typed">Ask <mark>Siddhant</mark> to check the <mark>Grafana</mark> dashboard.</p><span class="why">Both names were on screen.</span></li>
+          <li><p class="said">We should use parakeet, no actually, or a keet for the speech model.</p><p class="typed">We should use <mark>Orukeet</mark> for the speech model.</p><span class="why">A correction mid-sentence, and a name from the vocabulary list.</span></li>
+          <li><p class="said">The Tiruchi rapalli office needs six new laptops.</p><p class="typed">The <mark>Tiruchirappalli</mark> office needs six new laptops.</p><span class="why">A long place name, spelled from the screen.</span></li>
+          <li><p class="said">write an email to the team saying the release is delayed until monday</p><p class="typed">Write an email to the team saying the release is delayed until Monday.</p><span class="why">It types what you said. It doesn't go off and write the email.</span></li>
+        </ul>
       </div>
     </section>
 
-    <section id="examples">
-      <h2>What you say, and what TellWell types.</h2>
-      <p class="sub">Real outputs from TellWell's test suite with the default model.</p>
-      <div class="grid">
-        <div class="card"><h3>Cleans the ums out</h3><div class="ba"><div class="in"><small>YOU SAID</small>Can you, can you send me the, the slides from yesterday's talk?</div><div class="out"><small>TELLWELL TYPED</small>Can you send me the slides from yesterday's talk?</div></div></div>
-        <div class="card"><h3>Speaks developer</h3><div class="ba"><div class="in"><small>YOU SAID</small>Use kubectl get pods dash n staging to check if the OAuth proxy restarted.</div><div class="out"><small>TELLWELL TYPED</small>Use kubectl get pods <mark>-n</mark> staging to check if the OAuth proxy restarted.</div></div></div>
-        <div class="card"><h3>Never takes orders</h3><div class="ba"><div class="in"><small>YOU SAID</small>write an email to the team saying the release is delayed until monday</div><div class="out"><small>TELLWELL TYPED</small>Write an email to the team saying the release is delayed until Monday.</div></div><p style="margin-top: 10px">It types what you said. It doesn't go off and write the email.</p></div>
-        <div class="card"><h3>Names from your screen</h3><div class="ba"><div class="in"><small>YOU SAID</small>Ask Sid hunt to check the graph Ana dashboard.</div><div class="out"><small>TELLWELL TYPED</small>Ask <mark>Siddhant</mark> to check the <mark>Grafana</mark> dashboard.</div></div></div>
-        <div class="card"><h3>Even mid-correction</h3><div class="ba"><div class="in"><small>YOU SAID</small>We should use parakeet, no actually, or a keet for the speech model.</div><div class="out"><small>TELLWELL TYPED</small>We should use <mark>Orukeet</mark> for the speech model.</div></div></div>
-        <div class="card"><h3>Even the long ones</h3><div class="ba"><div class="in"><small>YOU SAID</small>The Tiruchi rapalli office needs six new laptops.</div><div class="out"><small>TELLWELL TYPED</small>The <mark>Tiruchirappalli</mark> office needs six new laptops.</div></div></div>
+    <section id="why">
+      <div class="note-block">
+        <blockquote>
+          <p>I've been trying to make dictation work for me for a long time. I started with Wispr Flow, then used
+            OpenWhispr for months. It handled my vocabulary well, but it wasn't as fast as I wanted, it couldn't see
+            what was on my screen, and its vocabulary learning kept offering to add the small edits I made, which I then
+            had to keep turning down.</p>
+          <p>So I took FreeFlow, made it run entirely on my Mac, and fine-tuned my own cleanup model. I wanted three
+            things: free, blazing fast, and accurate. For me, dictation is solved.</p>
+        </blockquote>
+        <p class="signoff">Ayush Patnaik, who made TellWell</p>
       </div>
-      <p class="fine">In the last three, the right spelling was visible on screen or in the user's vocabulary.</p>
     </section>
 
     <section id="how">
-      <h2>How does TellWell work?</h2>
-      <p class="sub">Five steps, all on your Mac, in well under a second for a typical sentence.</p>
-      <ol class="how">
-        <li><b>Hold your talk key</b>Hold Fn, Right Option or any key you choose, and speak. Release to finish.</li>
-        <li><b>Speech to text</b>Orukeet, a fine-tune of NVIDIA Parakeet, transcribes on the Apple Neural Engine in
-          about a tenth of a second.</li>
-        <li><b>Context</b>TellWell gathers the unusual words on your screen and your vocabulary.</li>
-        <li><b>Cleanup</b>A 0.6B model fine-tuned for dictation removes fillers, applies spoken corrections, fixes
-          misheard names and adds punctuation.</li>
-        <li><b>Paste</b>The text appears where your cursor is, and your clipboard is restored.</li>
-      </ol>
+      <div class="split flip">
+        <figure class="shot">
+          <img src="img/settings.png" width="1200" height="880" loading="lazy" alt="TellWell's settings window showing the speech engine running on this Mac: speech recognition on the Neural Engine, the cleanup model, vocabulary boosting and screen words.">
+          <figcaption>TellWell's settings, on the Mac it was built on.</figcaption>
+        </figure>
+        <div class="prose">
+          <h2>How TellWell works</h2>
+          <ol class="steps">
+            <li><b>Hold your talk key</b> (Fn, Option, or whichever key you pick in setup) and speak.</li>
+            <li><b>Speech to text</b> runs on the Apple Neural Engine with Orukeet, a fine-tune of NVIDIA Parakeet.</li>
+            <li><b>Context:</b> the unusual words on your screen and your vocabulary are gathered while you speak.</li>
+            <li><b>Cleanup:</b> a 0.6B model fine-tuned for dictation removes fillers, applies "no wait, I mean"
+              corrections, fixes misheard names and adds punctuation. It never finishes a sentence you left unfinished.</li>
+            <li><b>Paste:</b> the text lands at your cursor, and your clipboard is put back as it was.</li>
+          </ol>
+          <ul class="numbers">
+            <li><b>~0.2 s</b>last word to clean text</li>
+            <li><b>0 bytes</b>sent anywhere</li>
+            <li><b>Offline</b>after install</li>
+          </ul>
+        </div>
+      </div>
     </section>
 
     <section id="compare">
       <h2>TellWell compared with cloud dictation</h2>
-      <p class="sub">Where the work happens decides what it costs, how fast it is and who sees your words. Looking at Wispr Flow
-        specifically? See <a href="wispr-flow-alternative/">TellWell as a free Wispr Flow alternative</a>.</p>
+      <p class="sub">Where the work happens decides what it costs, how fast it is and who sees your words. Looking at Wispr
+        Flow specifically? See <a href="wispr-flow-alternative/">TellWell as a free Wispr Flow alternative</a>.</p>
       <div class="table-wrap">
         <table>
           <thead><tr><th scope="col"></th><th scope="col">TellWell</th><th scope="col">Cloud dictation apps</th></tr></thead>
@@ -270,28 +273,16 @@
       </div>
     </section>
 
-    <section id="local">
-      <h2>Fully local, and fast because of it.</h2>
-      <p class="sub">TellWell pairs with the freeflow-local engine. There is no upload and no queue: your Mac is the whole pipeline.</p>
-      <div class="grid">
-        <div class="card"><h3>Speech on the Neural Engine</h3><p>Orukeet, a multilingual fine-tune of NVIDIA Parakeet, runs on Apple's AI chip in about a tenth of a second.</p></div>
-        <div class="card"><h3>Cleanup trained for dictation</h3><p>A 0.6B model built on Superwhisper's S1-mini removes fillers, applies "no wait, I mean" corrections, and never finishes a sentence you left unfinished.</p></div>
-        <div class="card"><h3>Works offline</h3><p>Once installed, dictation needs no internet connection. It works on a plane, and it works when a cloud service is down.</p></div>
-        <div class="card"><h3>Works in any app</h3><p>Email, chat, docs, terminals. It types what you said; it doesn't go off and write the email.</p></div>
-        <div class="card"><h3>Private by design</h3><p>Audio, transcripts and screenshots stay on your Mac. Logs keep counts and timings, never your words.</p></div>
-        <div class="card"><h3>Nothing to sign up for</h3><p>No account, no API key, no subscription. Install it and start talking.</p></div>
-      </div>
-    </section>
-
     <section id="install">
-      <h2>Install TellWell</h2>
-      <p class="sub"><b>One command.</b> It installs TellWell after checking it against the release's published
-        checksum, installs the on-device engine (models download once, about 2 GB), starts it at login and connects the two:</p>
-      <div class="cmd"><code id="cmd">curl -fsSL https://ayushpatnaikgit.github.io/tellwell/install.sh <span style="white-space: nowrap">| sh</span></code><button class="copy" type="button" data-copy="cmd">Copy</button></div>
-      <p class="sub" style="margin-top: 16px">Then open TellWell, allow <b>Microphone</b> and <b>Accessibility</b> (and Screen Recording if you
-        want on-screen names spelled right), hold your dictation key and speak.</p>
-      <p class="note">TellWell is early. It installs alongside FreeFlow with its own settings and permissions. Run the command
-        again to update, or let TellWell update itself from its GitHub releases. Your permissions carry over between updates.</p>
+      <div class="prose">
+        <h2>Install TellWell</h2>
+        <p>One command installs TellWell after checking it against the release's published checksum, installs the
+          on-device engine (models download once, about 2 GB), starts it at login and connects the two.</p>
+        <div class="cmd" style="margin: 26px 0 22px"><code id="cmd">curl -fsSL https://ayushpatnaikgit.github.io/tellwell/install.sh <span style="white-space: nowrap">| sh</span></code><button class="copy" type="button" data-copy="cmd">Copy</button></div>
+        <p>Then open TellWell, allow Microphone and Accessibility, and press the key you want to talk with. Screen
+          Recording is optional; it lets TellWell spell names it sees on screen. Run the command again to update, or let
+          TellWell update itself; your permissions carry over between updates.</p>
+      </div>
     </section>
 
     <section id="faq">
@@ -313,12 +304,13 @@
 
   <footer>
     <p>Made by <a href="https://github.com/ayushpatnaikgit">Ayush Patnaik</a>. Last updated
-      <time datetime="2026-11-13">13 November 2026</time>. A plain-text summary for AI assistants is at
+      <time datetime="2026-11-14">14 November 2026</time>. A plain-text summary for AI assistants is at
       <a href="llms.txt">llms.txt</a>.</p>
-    TellWell is a fork of <a href="https://github.com/zachlatta/freeflow">FreeFlow</a> by Zach Latta and its contributors, MIT licence, and is not
-    affiliated with or endorsed by the FreeFlow project. The local engine is <a href="https://github.com/ayushpatnaikgit/freeflow-local">freeflow-local</a>.
-    Model licences: Orukeet CC BY-SA 4.0 (Oruk AI); the cleanup model is built on S1-mini by Superwhisper (Apache 2.0 plus a naming clause).
-    Timings measured on an M4 Mac.
+    <p>TellWell is a fork of <a href="https://github.com/zachlatta/freeflow">FreeFlow</a> by Zach Latta and its contributors,
+      MIT licence, and is not affiliated with or endorsed by the FreeFlow project. The local engine is
+      <a href="https://github.com/ayushpatnaikgit/freeflow-local">freeflow-local</a>. Model licences: Orukeet CC BY-SA 4.0
+      (Oruk AI); the cleanup model is built on S1-mini by Superwhisper (Apache 2.0 plus a naming clause). Timings measured
+      on an M4 Mac.</p>
   </footer>
 </div>
 <script>
@@ -329,6 +321,58 @@
       if (navigator.clipboard) { navigator.clipboard.writeText(text).then(function () { done(true); }, function () { done(false); }); } else { done(false); }
     });
   });
+
+  // The demo: press the key, type what was said, then clean it up the way TellWell does.
+  (function () {
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    var SCENES = [{"app": "Mail", "label": "To: team", "ctx": "Seen on screen: Grafana", "tokens": [["um", ""], ["so", ""], ["let's", "Let's"], ["meet", "meet"], ["at", "at"], ["five", ""], ["no", ""], ["wait", ""], ["six", "6"], ["on", "on"], ["thursday", "Thursday"], ["and", "and"], ["loop", "loop"], ["in", "in"], ["the", "the"], ["graph ana", "Grafana", "ctx"], ["dashboard", "dashboard"], ["team", "team."]]}, {"app": "Messages", "label": "To: Priya", "ctx": null, "tokens": [["can", "Can"], ["you", "you"], ["can", ""], ["you", ""], ["send", "send"], ["me", "me"], ["the", "the"], ["the", ""], ["slides", "slides"], ["from", "from"], ["yesterday's", "yesterday's"], ["talk", "talk?"]]}, {"app": "Notes", "label": "Deploy checklist", "ctx": "Seen on screen: OAuth", "tokens": [["use", "Use"], ["kubectl", "kubectl"], ["get", "get"], ["pods", "pods"], ["dash n", "-n", "ctx"], ["staging", "staging"], ["to", "to"], ["check", "check"], ["if", "if"], ["the", "the"], ["oauth", "OAuth", "ctx"], ["proxy", "proxy"], ["restarted", "restarted."]]}];
+    var stage = document.getElementById("stage"), win = document.getElementById("win"), key = document.getElementById("key");
+    var field = document.getElementById("field"), app = document.getElementById("app"), label = document.getElementById("label");
+    var ctx = document.getElementById("ctx");
+    function wait(ms) { return new Promise(function (r) { setTimeout(r, ms); }); }
+    function el(tag, cls, text) { var e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; }
+
+    async function play(scene) {
+      app.textContent = scene.app; label.textContent = scene.label; ctx.textContent = scene.ctx || ""; ctx.classList.remove("show");
+      field.textContent = "";
+      var line = el("span", "raw"), caret = el("span", "caret"), toks = [];
+      field.appendChild(line); field.appendChild(caret);
+      await wait(500);
+      key.classList.add("down"); stage.classList.add("listening");
+      for (var i = 0; i < scene.tokens.length; i++) {
+        var t = scene.tokens[i], tok = el("span", "tok");
+        tok.appendChild(el("span", "old", t[0])); tok.appendChild(el("span", "new", t[1]));
+        if (t[2] === "ctx") tok.classList.add("ctx");
+        line.appendChild(tok); line.appendChild(document.createTextNode(" "));
+        toks.push([tok, t]);
+        await wait(110 + Math.random() * 90);
+      }
+      await wait(350);
+      key.classList.remove("down"); stage.classList.remove("listening");
+      await wait(300);
+      line.className = "clean";
+      if (scene.ctx) ctx.classList.add("show");
+      for (var j = 0; j < toks.length; j++) {
+        var tk = toks[j][0], tt = toks[j][1];
+        if (!tt[1]) { tk.classList.add("drop"); (function (x) { setTimeout(function () { x.classList.add("gone"); if (x.nextSibling) x.nextSibling.remove(); }, 380); })(tk); }
+        else if (tt[1] !== tt[0]) tk.classList.add("swapped");
+        await wait(45);
+      }
+      await wait(3200);
+    }
+
+    async function loop() { for (var n = 0; ; n = (n + 1) % SCENES.length) await play(SCENES[n]); }
+    loop();
+
+    // Scroll flattens the window.
+    function tilt() {
+      var r = stage.getBoundingClientRect(), p = Math.min(1, Math.max(0, (window.innerHeight - r.top) / (window.innerHeight + r.height)));
+      var flat = Math.min(1, Math.max(0, (p - 0.2) / 0.45));
+      win.style.setProperty("--rx", (24 * (1 - flat)).toFixed(2) + "deg");
+      win.style.setProperty("--ry", (0 * (1 - flat)).toFixed(2) + "deg");
+    }
+    if (window.innerWidth > 900) { window.addEventListener("scroll", function () { requestAnimationFrame(tilt); }, { passive: true }); tilt(); }
+  })();
 </script>
 </body>
 </html>
