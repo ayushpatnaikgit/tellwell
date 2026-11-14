@@ -3,21 +3,21 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>TellWell: Free, Private, Context-Aware Dictation for Mac</title>
-<meta name="description" content="Free, open-source dictation for Mac that runs offline. Hold a key, speak, and clean text appears in any app. Context-aware: spells names from your screen.">
+<title>Free Speech to Text for Mac, Offline &amp; Context-Aware | TellWell</title>
+<meta name="description" content="Free speech to text for Mac that runs offline. Hold a key, speak, and clean text appears in any app. Open source, context-aware, no account.">
 <link rel="canonical" href="https://ayushpatnaikgit.github.io/tellwell/">
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="TellWell">
 <meta property="og:url" content="https://ayushpatnaikgit.github.io/tellwell/">
-<meta property="og:title" content="TellWell: Free, Private, Context-Aware Dictation for Mac">
-<meta property="og:description" content="Free, open-source dictation for Mac that runs offline. Hold a key, speak, and clean text appears in any app. Context-aware: spells names from your screen.">
+<meta property="og:title" content="Free Speech to Text for Mac, Offline &amp; Context-Aware | TellWell">
+<meta property="og:description" content="Free speech to text for Mac that runs offline. Hold a key, speak, and clean text appears in any app. Open source, context-aware, no account.">
 <meta property="og:image" content="https://ayushpatnaikgit.github.io/tellwell/og.png">
 <meta property="og:image:width" content="1200">
 <meta property="og:image:height" content="630">
 <meta property="og:image:alt" content="TellWell: say it, and clean text appears. Free, private, context-aware dictation for Mac.">
 <meta name="twitter:card" content="summary_large_image">
-<meta name="twitter:title" content="TellWell: Free, Private, Context-Aware Dictation for Mac">
-<meta name="twitter:description" content="Free, open-source dictation for Mac that runs offline. Hold a key, speak, and clean text appears in any app. Context-aware: spells names from your screen.">
+<meta name="twitter:title" content="Free Speech to Text for Mac, Offline &amp; Context-Aware | TellWell">
+<meta name="twitter:description" content="Free speech to text for Mac that runs offline. Hold a key, speak, and clean text appears in any app. Open source, context-aware, no account.">
 <meta name="twitter:image" content="https://ayushpatnaikgit.github.io/tellwell/og.png">
 <meta name="author" content="Ayush Patnaik">
 <meta name="theme-color" content="#0b8a87">
@@ -158,94 +158,11 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Space+Grotesk:wght@600;700&display=swap" rel="stylesheet">
-<style>
-  :root {
-    --bg: #ffffff; --bg-soft: #f3f6f9; --card: #ffffff; --line: #dfe5ec;
-    --ink: #0f1b2d; --muted: #4a5568; --accent: #0b8a87; --accent-ink: #ffffff; --code: #0f1b2d; --code-ink: #e6edf5;
-  }
-  @media (prefers-color-scheme: dark) {
-    :root {
-      --bg: #0b1320; --bg-soft: #111c2c; --card: #121e30; --line: #24324a;
-      --ink: #e8eef6; --muted: #a3b1c4; --accent: #2dd4bf; --accent-ink: #062226; --code: #060c16; --code-ink: #dbe6f3;
-    }
-  }
-  * { box-sizing: border-box; }
-  body { margin: 0; background: var(--bg); color: var(--ink); font: 17px/1.6 Inter, system-ui, -apple-system, sans-serif; }
-  a { color: var(--accent); }
-  .wrap { max-width: 1080px; margin: 0 auto; padding: 0 20px; }
-  header { display: flex; align-items: center; justify-content: space-between; padding: 22px 0; gap: 16px; flex-wrap: wrap; }
-  .brand { display: flex; align-items: center; gap: 10px; text-decoration: none; color: var(--ink); font: 700 24px/1 'Space Grotesk', Inter, sans-serif; letter-spacing: -0.5px; }
-  nav { display: flex; gap: 22px; flex-wrap: wrap; }
-  nav a { color: var(--muted); text-decoration: none; font-weight: 500; }
-  nav a:hover { color: var(--ink); }
-  .mark-bar { fill: var(--ink); } .mark-stem { fill: var(--accent); }
-  .hero { display: grid; grid-template-columns: minmax(0, 1.42fr) minmax(0, 0.58fr); gap: 40px; align-items: center; padding: 48px 0 72px; }
-  h1 { font: 700 clamp(40px, 6vw, 64px)/1.05 'Space Grotesk', Inter, sans-serif; letter-spacing: -1.5px; margin: 0 0 20px; }
-  h2 { font: 700 clamp(28px, 4vw, 38px)/1.15 'Space Grotesk', Inter, sans-serif; letter-spacing: -0.8px; margin: 0 0 12px; }
-  h3 { font: 600 19px/1.3 Inter, sans-serif; margin: 0 0 6px; }
-  .lede { font-size: 20px; color: var(--muted); margin: 0 0 28px; max-width: 34em; }
-  .cta { display: flex; gap: 14px; flex-wrap: wrap; align-items: center; }
-  .btn { display: inline-flex; align-items: center; gap: 8px; min-height: 48px; padding: 12px 22px; border-radius: 12px; font-weight: 600; text-decoration: none; border: 1px solid var(--line); color: var(--ink); background: var(--card); }
-  .btn.primary { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
-  .fine { font-size: 14px; color: var(--muted); margin: 14px 0 0; }
-  .demo { background: var(--bg-soft); border: 1px solid var(--line); border-radius: 20px; padding: 24px; display: flex; flex-direction: column; gap: 14px; }
-  .demo .row { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 14px 16px; }
-  .demo small { display: block; font-size: 12px; font-weight: 600; letter-spacing: 0.5px; color: var(--muted); margin-bottom: 4px; }
-  .demo s { color: var(--muted); }
-  .demo mark { background: color-mix(in srgb, var(--accent) 22%, transparent); color: var(--ink); border-radius: 4px; padding: 0 3px; }
-  .stats { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 16px; padding-bottom: 72px; }
-  .stat { background: var(--bg-soft); border: 1px solid var(--line); border-radius: 16px; padding: 20px; }
-  .stat b { display: block; font: 700 30px/1.1 'Space Grotesk', Inter, sans-serif; margin-bottom: 6px; }
-  .stat span { color: var(--muted); font-size: 15px; }
-  section { padding: 64px 0; border-top: 1px solid var(--line); }
-  .sub { color: var(--muted); max-width: 40em; margin: 0 0 32px; }
-  .grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 18px; }
-  .card { background: var(--card); border: 1px solid var(--line); border-radius: 16px; padding: 22px; }
-  .card p { margin: 0; color: var(--muted); font-size: 16px; }
-  ol.steps { margin: 0; padding-left: 22px; display: flex; flex-direction: column; gap: 18px; max-width: 46em; }
-  ol.steps li { padding-left: 6px; }
-  .cmd { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; max-width: 44em; margin-top: 10px; padding: 8px 8px 8px 14px;
-    background: var(--card); border: 1px solid var(--line); border-radius: 14px; box-shadow: 0 1px 3px rgb(15 27 45 / 0.06); }
-  .cmd code { flex: 1 1 16em; min-width: 0; padding: 6px 0; font: 13.5px/1.5 ui-monospace, SFMono-Regular, Menlo, monospace; color: var(--ink); overflow-wrap: anywhere; }
-  .cmd code::before { content: "$ "; color: var(--muted); user-select: none; }
-  .copy { flex: none; min-height: 38px; padding: 6px 16px; border-radius: 10px; border: 0; background: var(--accent); color: var(--accent-ink); font: 600 14px Inter, sans-serif; cursor: pointer; }
-  .copy:hover { filter: brightness(1.08); }
-  .ba { display: flex; flex-direction: column; gap: 8px; margin-top: 12px; }
-  .ba .in, .ba .out { border-radius: 10px; padding: 10px 12px; font-size: 15px; line-height: 1.5; }
-  .ba .in { background: var(--bg-soft); color: var(--muted); }
-  .ba .out { border: 1px solid var(--line); }
-  .ba small { display: block; font-size: 11px; font-weight: 600; letter-spacing: 0.5px; color: var(--muted); margin-bottom: 2px; }
-  .ba mark, .demo mark { background: color-mix(in srgb, var(--accent) 22%, transparent); color: var(--ink); border-radius: 4px; padding: 0 3px; }
-  .note { background: var(--bg-soft); border: 1px solid var(--line); border-radius: 14px; padding: 16px 18px; font-size: 15px; color: var(--muted); max-width: 46em; margin-top: 24px; }
-  footer { border-top: 1px solid var(--line); padding: 32px 0 48px; color: var(--muted); font-size: 14px; }
-  footer p { margin: 0 0 8px; }
-  .kicker { margin: 0 0 14px; font-size: 14px; font-weight: 600; letter-spacing: 0.6px; text-transform: uppercase; color: var(--accent); }
-  .answer { max-width: 44em; font-size: 18px; margin: 0 0 32px; }
-  ol.how { margin: 0; padding: 0; list-style: none; counter-reset: how; display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 16px; }
-  ol.how li { counter-increment: how; background: var(--card); border: 1px solid var(--line); border-radius: 16px; padding: 20px; font-size: 16px; color: var(--muted); }
-  ol.how li::before { content: counter(how); display: inline-flex; align-items: center; justify-content: center; width: 30px; height: 30px; margin-bottom: 10px; border-radius: 50%; background: var(--accent); color: var(--accent-ink); font-weight: 600; }
-  ol.how b { display: block; color: var(--ink); margin-bottom: 4px; }
-  .table-wrap { overflow-x: auto; border: 1px solid var(--line); border-radius: 16px; }
-  table { width: 100%; border-collapse: collapse; font-size: 16px; min-width: 560px; }
-  th, td { text-align: left; padding: 14px 18px; border-bottom: 1px solid var(--line); vertical-align: top; }
-  thead th { background: var(--bg-soft); font-weight: 600; }
-  tbody tr:last-child th, tbody tr:last-child td { border-bottom: 0; }
-  tbody th { font-weight: 500; color: var(--muted); width: 30%; }
-  .faq { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 18px 40px; max-width: 1040px; }
-  .faq h3 { margin-bottom: 6px; }
-  .faq p { margin: 0; color: var(--muted); font-size: 16px; }
-  @media (max-width: 860px) {
-    .hero { grid-template-columns: minmax(0, 1fr); padding-top: 24px; }
-    .stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-    .grid { grid-template-columns: minmax(0, 1fr); }
-    ol.how { grid-template-columns: minmax(0, 1fr); }
-    .faq { grid-template-columns: minmax(0, 1fr); }
-  }
-</style>
+<link rel="stylesheet" href="style.css">
 </head>
 <body>
 <div class="wrap">
-  <header>
+  <header class="bar">
     <a class="brand" href="./" aria-label="TellWell home">
       <svg width="30" height="30" viewBox="10 8 82 86" aria-hidden="true"><rect class="mark-bar" x="12" y="24" width="9" height="12" rx="4.5"/><rect class="mark-bar" x="25" y="19" width="9" height="22" rx="4.5"/><rect class="mark-bar" x="38" y="14" width="9" height="32" rx="4.5"/><rect class="mark-stem" x="51" y="10" width="9" height="82" rx="4.5"/><rect class="mark-bar" x="64" y="14" width="9" height="32" rx="4.5"/><rect class="mark-bar" x="77" y="19" width="9" height="22" rx="4.5"/></svg>
       TellWell
@@ -253,9 +170,9 @@
     <nav aria-label="Main">
       <a href="#context">Context-aware</a>
       <a href="#how">How it works</a>
+      <a href="wispr-flow-alternative/">vs Wispr Flow</a>
       <a href="#faq">FAQ</a>
-      <a href="#install">Install</a>
-      <a href="https://github.com/ayushpatnaikgit/tellwell">GitHub</a>
+      <a class="nav-cta" href="#install">Install</a>
     </nav>
   </header>
 
@@ -268,8 +185,8 @@
         <p class="fine" style="margin: 0 0 8px">Install TellWell and its on-device engine with one command in Terminal:</p>
         <div class="cmd" style="margin: 0 0 20px"><code id="cmd-hero">curl -fsSL https://ayushpatnaikgit.github.io/tellwell/install.sh <span style="white-space: nowrap">| sh</span></code><button class="copy" type="button" data-copy="cmd-hero">Copy</button></div>
         <div class="cta">
-          <a class="btn" href="#install">What it installs</a>
-          <a class="btn" href="https://github.com/ayushpatnaikgit/tellwell">View source</a>
+          <a class="btn" href="wispr-flow-alternative/">Compare with Wispr Flow</a>
+          <a class="btn" href="https://github.com/ayushpatnaikgit/tellwell">View source on GitHub</a>
         </div>
         <p class="fine">Version 0.2.2 · Apple Silicon, macOS 14 or later · free and open source (MIT)</p>
       </div>
@@ -336,7 +253,8 @@
 
     <section id="compare">
       <h2>TellWell compared with cloud dictation</h2>
-      <p class="sub">Where the work happens decides what it costs, how fast it is and who sees your words.</p>
+      <p class="sub">Where the work happens decides what it costs, how fast it is and who sees your words. Looking at Wispr Flow
+        specifically? See <a href="wispr-flow-alternative/">TellWell as a free Wispr Flow alternative</a>.</p>
       <div class="table-wrap">
         <table>
           <thead><tr><th scope="col"></th><th scope="col">TellWell</th><th scope="col">Cloud dictation apps</th></tr></thead>
