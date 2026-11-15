@@ -9,8 +9,14 @@ enum LocalEngine {
     /// The engine ignores the key, but the provider settings need a non-empty one.
     static let apiKey = "local"
     static let installCommand = "curl -fsSL https://ayushpatnaikgit.github.io/tellwell/install.sh | sh"
-    /// The engine's own installer. TellWell's install.sh wraps it with --app tellwell, which also reinstalls TellWell.
-    nonisolated static let engineInstallerURL = "https://raw.githubusercontent.com/ayushpatnaikgit/freeflow-local/main/get.sh"
+    /// The engine's own installer and release files for one release tag ("v0.3.6"), so an update installs exactly the
+    /// release the user approved. (TellWell's install.sh wraps get.sh with --app tellwell, which reinstalls TellWell.)
+    nonisolated static func engineInstallerURL(tag: String) -> String {
+        "https://raw.githubusercontent.com/ayushpatnaikgit/freeflow-local/\(tag)/get.sh"
+    }
+    nonisolated static func engineReleaseURL(tag: String) -> String {
+        "https://github.com/ayushpatnaikgit/freeflow-local/releases/download/\(tag)"
+    }
     private static let healthURL = URL(string: "http://127.0.0.1:8081/health")!
 
     struct Status: Equatable {

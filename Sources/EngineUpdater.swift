@@ -5,8 +5,8 @@ import Foundation
 ///
 /// It compares the version the running engine reports at http://127.0.0.1:8081/health with the newest
 /// freeflow-local release on GitHub. If a newer one exists it asks first; only when the user clicks Update does it
-/// run the engine's installer (freeflow-local's get.sh) with --no-freeflow --no-configure: it installs the engine
-/// release only if it matches its published SHA-256, keeps models, settings and learned words, and restarts the
+/// run the installer from that release's tag (freeflow-local's get.sh, pinned to the release's own files) with
+/// --no-freeflow --no-configure: it installs the engine release only if it matches its published SHA-256, keeps models, settings and learned words, and restarts the
 /// engine, without installing or replacing any app (TellWell's own install.sh would reinstall TellWell) and without
 /// reconfiguring apps (which quits and reopens them). `freeflowctl update` does the same from Terminal, but engines
 /// before 0.3.6 don't have it, so the app runs the installer itself. Its output stays in memory and is shown only if the update fails; it holds no dictation
@@ -79,7 +79,10 @@ final class EngineUpdater {
         let result = await Task.detached(priority: .userInitiated) { () -> (Int32, String) in
             let process = Process()
             process.executableURL = URL(fileURLWithPath: "/bin/sh")
-            process.arguments = ["-c", EngineUpdater.updateScript]
+            guard let script = EngineUpdater.updateScript(tag: version) else {
+                return (-1, "Unexpected release tag: \(version)")
+            }
+            process.arguments = ["-c", script]
             var environment = ProcessInfo.processInfo.environment
             let home = FileManager.default.homeDirectoryForCurrentUser.path
             // The installer needs uv (installed to ~/.local/bin) and the usual tool locations; apps start with a
@@ -115,13 +118,17 @@ final class EngineUpdater {
         alert.runModal()
     }
 
-    /// Download the engine's installer to a temporary file and run it for the engine only.
-    nonisolated private static let updateScript = """
-    tmp=$(mktemp "${TMPDIR:-/tmp}/tellwell-engine-update.XXXXXX") || exit 1
-    curl -fsSL "\(LocalEngine.engineInstallerURL)" -o "$tmp" || { rm -f "$tmp"; echo "Could not download the installer"; exit 1; }
-    sh "$tmp" --no-freeflow --no-configure
-    status=$?
-    rm -f "$tmp"
-    exit $status
-    """
+    /// Download the installer of release `tag` and run it for the engine only, pinned to that release's files.
+    /// The tag comes from GitHub's release list; it is only used if it is a plain version tag ("v1.2.3").
+    nonisolated private static func updateScript(tag: String) -> String? {
+        guard tag.range(of: #"^v[0-9]+\.[0-9]+\.[0-9]+$"#, options: .regularExpression) != nil else { return nil }
+        return """
+        tmp=$(mktemp "${TMPDIR:-/tmp}/tellwell-engine-update.XXXXXX") || exit 1
+        curl -fsSL "\(LocalEngine.engineInstallerURL(tag: tag))" -o "$tmp" || { rm -f "$tmp"; echo "Could not download the installer"; exit 1; }
+        FREEFLOW_LOCAL_RELEASE="\(LocalEngine.engineReleaseURL(tag: tag))" sh "$tmp" --no-freeflow --no-configure
+        status=$?
+        rm -f "$tmp"
+        exit $status
+        """
+    }
 }
