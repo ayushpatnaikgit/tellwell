@@ -13,15 +13,15 @@
   <a href="https://github.com/ayushpatnaikgit/tellwell-android">TellWell for Android</a>
 </p>
 
-Install TellWell and its on-device engine (Apple Silicon, macOS 14+) with one command:
+Install TellWell (Apple Silicon, macOS 14+) with one command:
 
 ```sh
 curl -fsSL https://ayushpatnaikgit.github.io/tellwell/install.sh | sh
 ```
 
-It checks the app against the release's published SHA-256, installs the
-[freeflow-local](https://github.com/ayushpatnaikgit/freeflow-local) engine, starts it at login and connects the two.
-Run it again to update.
+It checks the disk image against the release's published SHA-256 and the app against TellWell's signing
+certificate, then opens it. On first launch TellWell downloads its speech and cleanup models once (about 830 MB).
+Run the command again to reinstall; TellWell also updates itself.
 
 TellWell is free. If it helps you, a star on GitHub helps other people find it.
 
@@ -29,8 +29,7 @@ TellWell is free. If it helps you, a star on GitHub helps other people find it.
 
 TellWell is a fork of [FreeFlow](https://github.com/zachlatta/freeflow) by Zach Latta, the free and open-source
 Mac dictation app. It keeps everything FreeFlow does and adds a focus on running entirely on your own Mac: speech
-recognition on the Apple Neural Engine and a small cleanup model fine-tuned for dictation, through the
-[freeflow-local](https://github.com/ayushpatnaikgit/freeflow-local) engine.
+recognition on the Apple Neural Engine and a small cleanup model fine-tuned for dictation, both built into the app.
 
 **Status: early.** TellWell isn't signed with an Apple Developer ID; the one-line installer avoids macOS's
 "could not verify" prompt. From 0.2.1, releases are signed with a self-signed certificate (SHA-1
@@ -44,6 +43,9 @@ maintaining FreeFlow. TellWell is not affiliated with or endorsed by the FreeFlo
 
 ## Build from source
 
+Building needs `cmake` (for the bundled llama.cpp, fetched at a pinned version and checksum by
+`scripts/build-llama.sh`); Xcode is not required.
+
 ```sh
 git clone https://github.com/ayushpatnaikgit/tellwell.git && cd tellwell
 make ARCH="$(uname -m)" CODESIGN_IDENTITY=-      # builds "TellWell Dev.app" in build/
@@ -52,14 +54,15 @@ make APP_NAME=TellWell BUNDLE_ID=io.github.ayushpatnaikgit.tellwell ARCH="$(unam
 
 ## Quick Start
 
-1. Run the one-line command above. It installs TellWell and the on-device engine (models download once, about 2 GB).
+1. Run the one-line command above. TellWell opens and downloads its models once (about 830 MB).
 2. Open TellWell and allow Microphone and Accessibility, plus Screen Recording if you want names on screen spelled right.
 3. Hold `Fn` to talk, or tap `Command-Fn` to start and stop dictation. The cleaned-up text is pasted into the current text field.
 
 ## Features
 
-- **Runs on your Mac:** speech recognition on the Apple Neural Engine and a cleanup model fine-tuned for dictation,
-  through the freeflow-local engine. There is no API key and no cloud service.
+- **Runs on your Mac:** speech recognition (NVIDIA Parakeet TDT 0.6B v2, English) on the Apple Neural Engine and a
+  cleanup model fine-tuned for dictation (S1-mini) on the GPU, inside the app. There is no API key, no cloud service
+  and nothing else to install.
 - **Cleanup that types what you meant:** removes fillers and applies "no wait, I mean" corrections without rewriting
   what you said.
 - **Context-aware spelling:** words on screen and in your custom vocabulary are used to fix mishearings of names and
@@ -73,9 +76,11 @@ language translation, voice macros and the Run Log.
 
 ## Privacy
 
-Your audio, transcripts and screenshots stay on your Mac: TellWell sends them only to the engine at
-`127.0.0.1:8081`. Recent dictations are kept in memory for the menu bar's History list and are gone when TellWell quits.
-The only network requests TellWell makes are update checks against its GitHub releases.
+Your audio, transcripts and screenshots stay on your Mac and are processed inside TellWell; they are never sent
+anywhere. Recent dictations are kept in memory for the menu bar's History list and are gone when TellWell quits.
+The only network requests TellWell makes are update checks against its GitHub releases and the one-time model
+download from [tellwell-models](https://github.com/ayushpatnaikgit/tellwell-models) (each file is checked against a
+pinned SHA-256).
 
 ## Contributing
 
