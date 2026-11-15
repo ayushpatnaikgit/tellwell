@@ -158,7 +158,12 @@ class TranscriptionService {
     }
 
     // Send audio file for transcription and return text
+    /// Transcribes in the app instead of uploading (the in-app engine); set once at launch.
+    nonisolated(unsafe) static var inAppTranscriber: ((URL) async throws -> String)?
+
     private func transcribeAudio(fileURL: URL) async throws -> String {
+        // Speech recognition runs in the app (Neural Engine); the audio file never leaves this Mac.
+        if let transcribe = Self.inAppTranscriber { return try await transcribe(fileURL) }
         return try await transcribeAudioWithURLSession(fileURL: fileURL)
     }
 

@@ -50,6 +50,24 @@ enum EngineTextTests {
         }
         testHintInsertion()
         testKeepSpokenWords()
+        testAppPromptIsRecognised()
+    }
+
+    /// The cleanup model was trained on the compact prompt: TellWell's real default prompt (and with the vocabulary
+    /// block the app appends) must be recognised and swapped. A mismatch here silently degrades every dictation.
+    private static func testAppPromptIsRecognised() {
+        let base = PostProcessingService.cleanupSystemPrompt(customSystemPrompt: "", outputLanguage: "", dictationLanguage: "")
+        TestSupport.expect(CleanupText.compactSystemPrompt(base) == CleanupText.compactPrompt,
+                           "the app's default cleanup prompt must map to the compact prompt")
+        let withVocabulary = base + "\n\n" + """
+The following vocabulary must be treated as high-priority terms while rewriting.
+Use these spellings exactly in the output when relevant:
+Grafana, Siddhant
+"""
+        let compact = CleanupText.compactSystemPrompt(withVocabulary)
+        TestSupport.expect(compact?.hasPrefix(CleanupText.compactPrompt) == true, "vocabulary must not stop the swap")
+        TestSupport.expectEqual(CleanupText.vocabularyTerms(compact), ["Grafana", "Siddhant"])
+        TestSupport.expect(CleanupText.compactSystemPrompt("Rewrite this formally.") == nil, "custom prompts pass through")
     }
 
     private static func testHintInsertion() {

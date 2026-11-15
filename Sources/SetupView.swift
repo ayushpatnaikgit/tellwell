@@ -29,8 +29,7 @@ struct SetupView: View {
     @State private var accessibilityTimer: Timer?
     @State private var screenRecordingTimer: Timer?
     @State private var customVocabularyInput: String = ""
-    @State private var engineStatus: LocalEngine.Status?
-    @State private var engineChecked = false
+    @ObservedObject private var modelStore = ModelStore.shared
     @State private var holdKeyDetected = false
     @State private var setupChosenToggle: ShortcutBinding?
 
@@ -91,7 +90,7 @@ struct SetupView: View {
                                     withAnimation { currentStep = nextStep(currentStep) }
                                 }
                                 .keyboardShortcut(.defaultAction)
-                                .disabled(engineStatus == nil)
+                                .disabled(modelStore.state != .ready)
                             } else if currentStep == .vocabulary {
                                 Button("Continue") {
                                     saveCustomVocabularyAndContinue()
@@ -237,72 +236,25 @@ struct SetupView: View {
         }
     }
 
-    /// Finds the engine on this Mac, rechecking every 2 s so it picks up an install running in Terminal.
+    /// Downloads the models once; the engine itself is part of the app.
     var engineStep: some View {
         VStack(spacing: 18) {
             Spacer(minLength: 0)
-            Image(systemName: engineStatus != nil ? "checkmark.seal.fill" : "cpu")
+            Image(systemName: modelStore.state == .ready ? "checkmark.seal.fill" : "cpu")
                 .font(.system(size: 54))
-                .foregroundStyle(engineStatus != nil ? Color.green : TellWellBrand.accent)
+                .foregroundStyle(modelStore.state == .ready ? Color.green : TellWellBrand.accent)
 
             Text("Speech Engine")
                 .font(.title)
                 .fontWeight(.bold)
 
-            if let status = engineStatus {
-                Text("\(AppName.displayName)'s engine is running on this Mac. Your voice and text stay on it.")
-                    .multilineTextAlignment(.center)
-                    .foregroundStyle(.secondary)
-                    .fixedSize(horizontal: false, vertical: true)
-                VStack(alignment: .leading, spacing: 10) {
-                    engineRow("waveform", "Speech recognition", status.speechDescription)
-                    engineRow("text.badge.checkmark", "Cleanup", status.cleanupDescription)
-                }
+            ModelsView(startAutomatically: true)
                 .padding(14)
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .background(RoundedRectangle(cornerRadius: 10).fill(Color(nsColor: .controlBackgroundColor).opacity(0.6)))
-            } else if engineChecked {
-                Text("\(AppName.displayName) runs speech recognition and cleanup on your Mac with a small engine. It isn't running yet: paste this into Terminal to install it. This step continues by itself once it's running.")
-                    .multilineTextAlignment(.center)
-                    .foregroundStyle(.secondary)
-                    .fixedSize(horizontal: false, vertical: true)
-                EngineInstallCommandView()
-                HStack(spacing: 8) {
-                    ProgressView().controlSize(.small)
-                    Text("Waiting for the engine (needs an Apple Silicon Mac)")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                }
-            } else {
-                ProgressView("Looking for the engine on this Mac...")
-            }
 
             Spacer(minLength: 0)
         }
-        .task {
-            while !Task.isCancelled {
-                let status = await LocalEngine.probe()
-                engineStatus = status
-                engineChecked = true
-                if status != nil { return }
-                try? await Task.sleep(nanoseconds: 2_000_000_000)
-            }
-        }
-    }
-
-    private func engineRow(_ icon: String, _ title: String, _ value: String) -> some View {
-        HStack(spacing: 10) {
-            Image(systemName: icon)
-                .foregroundStyle(TellWellBrand.accent)
-                .frame(width: 20)
-            Text(title)
-            Spacer()
-            Text(value)
-                .foregroundStyle(.secondary)
-                .lineLimit(1)
-                .truncationMode(.middle)
-        }
-        .font(.subheadline)
     }
 
     var micPermissionStep: some View {

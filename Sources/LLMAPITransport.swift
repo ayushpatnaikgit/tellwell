@@ -1,6 +1,9 @@
 import Foundation
 
 enum LLMAPITransport {
+    /// Answers requests in the app instead of the network (the in-app engine); set once at launch.
+    nonisolated(unsafe) static var inAppResponder: ((URLRequest) async throws -> (Data, URLResponse)?)?
+
     private static func makeEphemeralSession(timeout: TimeInterval) -> URLSession {
         let configuration = URLSessionConfiguration.ephemeral
         configuration.requestCachePolicy = .reloadIgnoringLocalCacheData
@@ -51,6 +54,7 @@ enum LLMAPITransport {
         using session: URLSession,
         cache: TemperatureCapabilityCache
     ) async throws -> (Data, URLResponse) {
+        if let answer = try await inAppResponder?(request) { return answer }
         let observation = cache.beginObservation(for: request)
         let capability = observation.capability
         let outgoing = capability == .unsupported ? requestWithoutTemperature(request) ?? request : request

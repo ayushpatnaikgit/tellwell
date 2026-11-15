@@ -6,6 +6,9 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     private var settingsWindow: NSWindow?
 
     func applicationDidFinishLaunching(_ notification: Notification) {
+        // The engine runs in the app: its requests never touch the network.
+        LLMAPITransport.inAppResponder = { try await InAppEngineTransport.respond(to: $0) }
+        TranscriptionService.inAppTranscriber = { try await InAppEngine.shared.transcribe(fileURL: $0) }
         NetworkMonitor.shared.start()
 
         NotificationCenter.default.addObserver(
@@ -35,6 +38,15 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             }
         }
 
+        // Load the speech and cleanup models now, so the first dictation is quick.
+        if ModelStore.modelsPresent {
+            Task.detached(priority: .utility) { try? await InAppEngine.shared.prepare() }
+        }
+    }
+
+    func applicationWillTerminate(_ notification: Notification) {
+        // llama.cpp's GPU backend aborts if the model is still loaded when the process exits.
+        InAppEngine.unloadForExit()
     }
 
     func applicationShouldHandleReopen(_ sender: NSApplication, hasVisibleWindows flag: Bool) -> Bool {
