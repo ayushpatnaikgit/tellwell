@@ -236,3 +236,23 @@ dialog#film .close { position: absolute; right: -6px; top: -46px; width: 36px; h
 .btn.big { min-height: 60px; padding: 16px 34px; font-size: 19px; border-radius: 16px; }
 .hero-actions + .hero-actions { margin-top: 14px; }
 dialog#film.portrait { width: min(400px, 88vw, 46vh); }
+
+/* Mac install: a download button plus pictures of the one-time macOS confirmation. */
+.alt-install { align-self: center; color: var(--muted); font-size: 15px; }
+.alt-head { margin-top: 34px; }
+.mac-steps .mock { margin: 14px 0 6px; max-width: 360px; font-size: 13px; line-height: 1.35; color: var(--ink);
+  background: var(--paper); border: 1px solid var(--line); border-radius: 12px; box-shadow: var(--shadow); }
+.mock p { margin: 0; }
+.mock-alert { padding: 18px 18px 14px; text-align: center; }
+.mock-icon { width: 44px; height: 44px; margin: 0 auto 10px; border-radius: 10px; background: url(img/app-icon.png) center / contain no-repeat; }
+.mock-title { font-weight: 600; }
+.mock-text { margin: 4px 0 12px !important; color: var(--muted); }
+.mac-steps { max-width: 44em; }
+.mock-btn { white-space: nowrap; display: inline-block; margin: 3px; padding: 4px 14px; border-radius: 7px; border: 1px solid var(--line);
+  background: var(--bg); font-weight: 500; }
+.mock-btn.on { background: var(--accent); color: var(--accent-ink); border-color: transparent; }
+.mock-settings { padding: 12px 14px; }
+.mock-head { font-weight: 600; margin-bottom: 8px !important; }
+.mock-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 10px 12px;
+  border-radius: 8px; background: var(--bg); }
+.mock-alert .mock-btn { display: block; margin: 6px 0 0; }

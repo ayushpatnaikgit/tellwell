@@ -16,7 +16,7 @@ subscription or API key. Current version: 0.2.2 (updated 2026-11-13).
 - Speed: about 0.2 s from the last word to clean text for a sentence, about 0.4 s for a two-line message (M4 Mac).
 - Works in any app with a text field; pastes at the cursor and restores the clipboard.
 - Language: tuned for English.
-- Install: `curl -fsSL https://ayushpatnaikgit.github.io/tellwell/install.sh | sh` (the app downloads about 830 MB of models once).
+- Install: download https://github.com/ayushpatnaikgit/tellwell/releases/latest/download/TellWell.dmg, drag TellWell to Applications and open it (macOS asks to confirm once: System Settings → Privacy & Security → Open Anyway), or run `curl -fsSL https://ayushpatnaikgit.github.io/tellwell/install.sh | sh`. The app downloads about 830 MB of models once.
 - Made by Ayush Patnaik; a fork of FreeFlow by Zach Latta.
 
 ## TellWell for Android

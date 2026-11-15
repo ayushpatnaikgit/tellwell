@@ -13,15 +13,24 @@
   <a href="https://github.com/ayushpatnaikgit/tellwell-android">TellWell for Android</a>
 </p>
 
-Install TellWell (Apple Silicon, macOS 14+) with one command:
+<p align="center">
+  <a href="https://github.com/ayushpatnaikgit/tellwell/releases/latest/download/TellWell.dmg"><b>Download TellWell for Mac</b></a>
+  · Apple Silicon, macOS 14+
+</p>
+
+Open the disk image and drag TellWell to Applications. TellWell isn't notarized by Apple, so the first time you open it
+macOS says it can't verify the app: click **Done**, then go to **System Settings → Privacy & Security**, click
+**Open Anyway** next to "TellWell was blocked" and enter your password. TellWell then downloads its speech and cleanup
+models once (about 830 MB), and updates itself after that.
+
+Or install from Terminal, which skips that prompt:
 
 ```sh
 curl -fsSL https://ayushpatnaikgit.github.io/tellwell/install.sh | sh
 ```
 
-It checks the disk image against the release's published SHA-256 and the app against TellWell's signing
-certificate, then opens it. On first launch TellWell downloads its speech and cleanup models once (about 830 MB).
-Run the command again to reinstall; TellWell also updates itself.
+It checks the disk image against the release's published SHA-256 and the app against TellWell's signing certificate,
+then opens it.
 
 TellWell is free. If it helps you, a star on GitHub helps other people find it.
 
@@ -54,7 +63,7 @@ make APP_NAME=TellWell BUNDLE_ID=io.github.ayushpatnaikgit.tellwell ARCH="$(unam
 
 ## Quick Start
 
-1. Run the one-line command above. TellWell opens and downloads its models once (about 830 MB).
+1. Download and open TellWell (or run the command above). It downloads its models once (about 830 MB).
 2. Open TellWell and allow Microphone and Accessibility, plus Screen Recording if you want names on screen spelled right.
 3. Hold `Fn` to talk, or tap `Command-Fn` to start and stop dictation. The cleaned-up text is pasted into the current text field.
 

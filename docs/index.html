@@ -40,7 +40,7 @@
     "price": "0",
     "priceCurrency": "USD"
   },
-  "downloadUrl": "https://ayushpatnaikgit.github.io/tellwell/#install",
+  "downloadUrl": "https://github.com/ayushpatnaikgit/tellwell/releases/latest/download/TellWell.dmg",
   "installUrl": "https://ayushpatnaikgit.github.io/tellwell/#install",
   "image": "https://ayushpatnaikgit.github.io/tellwell/og.png",
   "featureList": [
@@ -193,7 +193,10 @@
       <h1>Say it. TellWell writes it down well.</h1>
       <p class="lede">Hold a key, speak, and clean, punctuated text appears in any app, spelled the way it is on your screen.
         Free and open source, and it runs entirely on your Mac.</p>
-      <div class="cmd"><code id="cmd-hero">curl -fsSL https://ayushpatnaikgit.github.io/tellwell/install.sh <span style="white-space: nowrap">| sh</span></code><button class="copy" type="button" data-copy="cmd-hero">Copy</button></div>
+      <div class="hero-actions">
+        <a class="btn primary big" href="https://github.com/ayushpatnaikgit/tellwell/releases/latest/download/TellWell.dmg">Download for Mac</a>
+        <a class="alt-install" href="#install">or install from Terminal</a>
+      </div>
       <div class="hero-actions">
         <button class="watch" type="button" id="watch"><span aria-hidden="true">▶</span> Watch the film <span class="len">36 s</span></button>
         <a class="watch star" href="https://github.com/ayushpatnaikgit/tellwell"><span aria-hidden="true">★</span> Star on GitHub</a>
@@ -302,12 +305,33 @@
     <section id="install">
       <div class="prose">
         <h2>Install TellWell</h2>
-        <p>One command installs TellWell after checking it against the release's published checksum and signing
-          certificate. TellWell then downloads its models once (about 830 MB); there is nothing else to install.</p>
-        <div class="cmd" style="margin: 26px 0 22px"><code id="cmd">curl -fsSL https://ayushpatnaikgit.github.io/tellwell/install.sh <span style="white-space: nowrap">| sh</span></code><button class="copy" type="button" data-copy="cmd">Copy</button></div>
-        <p>Then open TellWell, allow Microphone and Accessibility, and press the key you want to talk with. Screen
-          Recording is optional; it lets TellWell spell names it sees on screen. Run the command again to update, or let
-          TellWell update itself; your permissions carry over between updates.</p>
+        <p>TellWell is free and isn't sold through the App Store, so macOS asks you to confirm it once. After that it
+          updates itself without asking again.</p>
+        <ol class="steps mac-steps">
+          <li><b><a href="https://github.com/ayushpatnaikgit/tellwell/releases/latest/download/TellWell.dmg">Download TellWell.dmg</a></b>, open it and drag TellWell to Applications.</li>
+          <li><b>Open TellWell.</b> macOS says it can't verify the app. Click <b>Done</b>.
+            <div class="mock mock-alert" aria-hidden="true">
+              <div class="mock-icon"></div>
+              <p class="mock-title">“TellWell” Not Opened</p>
+              <p class="mock-text">Apple could not verify “TellWell” is free of malware…</p>
+              <span class="mock-btn on">Done</span><span class="mock-btn">Move to Trash</span>
+            </div>
+          </li>
+          <li><b>Open System Settings → Privacy &amp; Security</b>, scroll down and click <b>Open Anyway</b> next to
+            “TellWell was blocked”. Enter your password, then click <b>Open</b>.
+            <div class="mock mock-settings" aria-hidden="true">
+              <p class="mock-head">Security</p>
+              <div class="mock-row"><span>“TellWell” was blocked to protect your Mac.</span><span class="mock-btn on">Open Anyway</span></div>
+            </div>
+          </li>
+          <li><b>TellWell opens and downloads its models</b> once (about 830 MB). Allow Microphone and Accessibility,
+            then press the key you want to talk with. Screen Recording is optional; it lets TellWell spell names it sees on
+            screen.</li>
+        </ol>
+        <h3 class="alt-head">Or install from Terminal</h3>
+        <p>One command downloads TellWell, checks it against the release's published checksum and signing certificate,
+          and opens it, without the prompt above.</p>
+        <div class="cmd" style="margin: 18px 0 22px"><code id="cmd">curl -fsSL https://ayushpatnaikgit.github.io/tellwell/install.sh <span style="white-space: nowrap">| sh</span></code><button class="copy" type="button" data-copy="cmd">Copy</button></div>
         <p class="star-ask">TellWell is free. If it helps you, a <a href="https://github.com/ayushpatnaikgit/tellwell">star on GitHub</a> helps other people find it.</p>
       </div>
     </section>
