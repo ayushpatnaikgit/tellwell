@@ -5,9 +5,11 @@ import Foundation
 ///
 /// It compares the version the running engine reports at http://127.0.0.1:8081/health with the newest
 /// freeflow-local release on GitHub. If a newer one exists it asks first; only when the user clicks Update does it
-/// run the engine's own updater, `freeflowctl update`. That is the same installer as the one-line install: it
-/// installs the release only if it matches its published SHA-256, keeps models, settings and learned words, and
-/// restarts the engine. Its output stays in memory and is shown only if the update fails; it holds no dictation
+/// run the engine's installer (freeflow-local's get.sh) with --no-freeflow --no-configure: it installs the engine
+/// release only if it matches its published SHA-256, keeps models, settings and learned words, and restarts the
+/// engine, without installing or replacing any app (TellWell's own install.sh would reinstall TellWell) and without
+/// reconfiguring apps (which quits and reopens them). `freeflowctl update` does the same from Terminal, but engines
+/// before 0.3.6 don't have it, so the app runs the installer itself. Its output stays in memory and is shown only if the update fails; it holds no dictation
 /// content.
 @MainActor
 final class EngineUpdater {
@@ -76,8 +78,8 @@ final class EngineUpdater {
         defer { isUpdating = false }
         let result = await Task.detached(priority: .userInitiated) { () -> (Int32, String) in
             let process = Process()
-            process.executableURL = URL(fileURLWithPath: "/bin/zsh")
-            process.arguments = [EngineUpdater.freeflowctlPath, "update"]
+            process.executableURL = URL(fileURLWithPath: "/bin/sh")
+            process.arguments = ["-c", EngineUpdater.updateScript]
             var environment = ProcessInfo.processInfo.environment
             let home = FileManager.default.homeDirectoryForCurrentUser.path
             // The installer needs uv (installed to ~/.local/bin) and the usual tool locations; apps start with a
@@ -113,8 +115,13 @@ final class EngineUpdater {
         alert.runModal()
     }
 
-    nonisolated private static var freeflowctlPath: String {
-        FileManager.default.homeDirectoryForCurrentUser
-            .appendingPathComponent("Library/Application Support/FreeFlowLocal/freeflowctl").path
-    }
+    /// Download the engine's installer to a temporary file and run it for the engine only.
+    nonisolated private static let updateScript = """
+    tmp=$(mktemp "${TMPDIR:-/tmp}/tellwell-engine-update.XXXXXX") || exit 1
+    curl -fsSL "\(LocalEngine.engineInstallerURL)" -o "$tmp" || { rm -f "$tmp"; echo "Could not download the installer"; exit 1; }
+    sh "$tmp" --no-freeflow --no-configure
+    status=$?
+    rm -f "$tmp"
+    exit $status
+    """
 }
