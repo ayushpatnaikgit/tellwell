@@ -3,5 +3,3 @@ build/
 *.swp
 .env
 .build
-ads/*/out/
-blog-drafts/
