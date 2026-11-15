@@ -21,9 +21,9 @@ subscription or API key. Current version: 0.2.2 (updated 2026-11-13).
 
 ## TellWell for Android
 
-- A free, open-source voice typing keyboard for Android 10+ (64-bit), version 0.1.0. It works alongside Gboard: tap
+- A free, open-source voice typing keyboard for Android 10+ (64-bit), version 0.2.0. It works alongside Gboard: tap
   the globe key, talk, tap, and it types clean text and switches back.
-- Speech to text (NVIDIA Parakeet TDT 0.6B v3) and cleanup (S1-mini FreeFlow Cleanup, Q4_0) run on the phone; cleanup
+- Speech to text (NVIDIA Parakeet TDT 0.6B v2, English) and cleanup (S1-mini FreeFlow Cleanup, Q4_0) run on the phone; cleanup
   uses the Snapdragon NPU, else the Snapdragon GPU, else the CPU. About one second from tap to text on a Motorola
   Edge 70.
 - Internet is used only to download the models once (about 1 GB), verified by SHA-256. No account, no analytics.
