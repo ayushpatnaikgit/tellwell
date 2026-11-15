@@ -15,6 +15,9 @@ TEST_RUNNER = $(BUILD_DIR)/FreeFlowTests
 TEST_CONTEXT_HARNESS = $(BUILD_DIR)/ContextCaptureHarness.swift
 TEST_DISPATCH_HARNESS = $(BUILD_DIR)/AppTextInsertionDispatchHarness.swift
 TEST_PRODUCTION_SOURCES = \
+	Sources/Engine/SequenceMatcher.swift \
+	Sources/Engine/ScreenWords.swift \
+	Sources/Engine/CleanupText.swift \
 	Sources/APIConfigurationDraft.swift \
 	Sources/AppContextService.swift \
 	Sources/AppName.swift \
