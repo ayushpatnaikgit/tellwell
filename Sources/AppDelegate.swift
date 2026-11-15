@@ -27,6 +27,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             appState.startHotkeyMonitoring()
             appState.startAccessibilityPolling()
             Task { @MainActor in
+                UpdateManager.shared.engineUpdateCheck = { await EngineUpdater.shared.check(userInitiated: $0) }
                 UpdateManager.shared.startPeriodicChecks()
             }
 
@@ -170,6 +171,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         appState.startHotkeyMonitoring()
         appState.startAccessibilityPolling()
         Task { @MainActor in
+            UpdateManager.shared.engineUpdateCheck = { await EngineUpdater.shared.check(userInitiated: $0) }
             UpdateManager.shared.startPeriodicChecks()
         }
 

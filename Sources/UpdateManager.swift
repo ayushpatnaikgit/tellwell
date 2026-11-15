@@ -214,8 +214,20 @@ final class UpdateManager: ObservableObject {
 
     // MARK: - Check for Updates
 
+    /// Checks for a TellWell update, then for an update of the on-device engine (unless the app is updating).
     @MainActor
     func checkForUpdates(userInitiated: Bool) async {
+        await checkForAppUpdates(userInitiated: userInitiated)
+        let isDevBuild = Bundle.main.infoDictionary?["FreeFlowBuildTag"] as? String == nil
+        guard updateStatus == .idle, userInitiated || !isDevBuild, let checkEngine = engineUpdateCheck else { return }
+        await checkEngine(userInitiated)
+    }
+
+    /// Checks for an update of the on-device engine; set at launch (EngineUpdater), so this file has no engine code.
+    var engineUpdateCheck: (@MainActor (_ userInitiated: Bool) async -> Void)?
+
+    @MainActor
+    private func checkForAppUpdates(userInitiated: Bool) async {
         let currentBuildTag = Bundle.main.infoDictionary?["FreeFlowBuildTag"] as? String
         let currentVersionString = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "0.0.0"
 

@@ -36,6 +36,7 @@ TEST_PRODUCTION_SOURCES = \
 	Sources/TemperatureCapabilityCache.swift \
 	Sources/TranscriptionService.swift \
 	Sources/UpdateManager.swift \
+	Sources/EngineUpdatePolicy.swift \
 	Sources/ShortcutCore/DictationShortcutSessionController.swift \
 	Sources/ShortcutCore/ShortcutMatcher.swift \
 	Sources/ShortcutCore/ShortcutModels.swift

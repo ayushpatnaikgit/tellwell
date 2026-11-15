@@ -18,6 +18,8 @@ enum LocalEngine {
         var learning: Bool
         var learnedTerms: Int
         var screenWords: Bool
+        /// The engine release ("v0.3.6"); nil for engines from before 0.3.6, or installed from a git checkout.
+        var version: String? = nil
 
         var speechDescription: String { onNeuralEngine ? "Neural Engine" : "GPU" }
 
@@ -45,7 +47,8 @@ enum LocalEngine {
             boosting: json["asr_boost"] as? Bool ?? false,
             learning: json["vocab_learn"] as? Bool ?? false,
             learnedTerms: json["learned_terms"] as? Int ?? 0,
-            screenWords: json["screen_words"] as? Bool ?? false
+            screenWords: json["screen_words"] as? Bool ?? false,
+            version: json["version"] as? String
         )
     }
 

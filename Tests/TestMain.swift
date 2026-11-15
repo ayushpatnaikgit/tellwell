@@ -15,6 +15,7 @@ struct FreeFlowTests {
         ShortcutCoreTests.run()
         PipelineHistoryStoreTests.run()
         SemanticVersionTests.run()
+        EngineUpdatePolicyTests.run()
         LLMCooldownManagerTests.run()
         PostProcessingServiceTests.run()
         TranscriptionErrorPresentationCoreTests.run()
