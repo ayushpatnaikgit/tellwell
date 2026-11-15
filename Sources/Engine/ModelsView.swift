@@ -49,6 +49,11 @@ struct ModelsView: View {
                 Text("\(Int(fraction * Double(Self.totalMB))) of \(Self.totalMB) MB")
                     .font(.caption)
                     .foregroundStyle(.secondary)
+            case .preparing:
+                HStack(spacing: 8) {
+                    ProgressView().controlSize(.small)
+                    Text("Getting ready… The first time takes up to a minute.")
+                }
             case .failed(let message):
                 Label(message, systemImage: "exclamationmark.triangle.fill")
                     .foregroundStyle(.orange)

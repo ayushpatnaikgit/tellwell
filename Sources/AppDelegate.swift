@@ -41,6 +41,11 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         // Load the speech and cleanup models now, so the first dictation is quick.
         if ModelStore.modelsPresent {
             Task.detached(priority: .utility) { try? await InAppEngine.shared.prepare() }
+        } else if appState.hasCompletedSetup && ModelStore.systemSupported {
+            // Updated from a version that used the separate engine: fetch the models now and show the progress,
+            // rather than letting dictation fail until someone finds the download button.
+            ModelStore.shared.download()
+            showSettingsWindow()
         }
     }
 

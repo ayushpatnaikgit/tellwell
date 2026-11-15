@@ -13,6 +13,9 @@ final class ModelStore: ObservableObject {
     enum State: Equatable {
         case missing
         case downloading(fraction: Double)
+        /// Downloaded; loading the models once. The first load on a Mac compiles the speech model for the Neural
+        /// Engine (20 s or more), which must not happen during the first dictation: it would time out.
+        case preparing
         case ready
         case failed(String)
     }
@@ -110,6 +113,8 @@ final class ModelStore: ObservableObject {
                         }
                     }
                 }
+                state = .preparing
+                try? await InAppEngine.shared.prepare()
                 state = .ready
             } catch {
                 state = .failed((error as? DownloadError)?.message ?? "The download didn't finish. Check your connection and try again.")
