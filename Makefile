@@ -15,9 +15,13 @@ TEST_RUNNER = $(BUILD_DIR)/FreeFlowTests
 TEST_CONTEXT_HARNESS = $(BUILD_DIR)/ContextCaptureHarness.swift
 TEST_DISPATCH_HARNESS = $(BUILD_DIR)/AppTextInsertionDispatchHarness.swift
 TEST_PRODUCTION_SOURCES = \
+	Sources/Engine/SequenceMatcher.swift \
+	Sources/Engine/ScreenWords.swift \
+	Sources/Engine/CleanupText.swift \
 	Sources/APIConfigurationDraft.swift \
 	Sources/AppContextService.swift \
 	Sources/AppName.swift \
+	Sources/CodeSignatureCheck.swift \
 	Sources/AppTextInsertionCore.swift \
 	Sources/AppTextInsertionTarget.swift \
 	Sources/ContextInferenceFailure.swift \
@@ -44,6 +48,18 @@ SHELL_SCRIPTS = $(shell find .github/scripts .agents/skills -name '*.sh' -type f
 YAML_FILES = $(shell find .github -type f \( -name '*.yml' -o -name '*.yaml' \) | LC_ALL=C sort)
 RESOURCES = $(CONTENTS)/Resources
 ARCH ?= $(shell uname -m)
+MIN_MACOS = 13.0
+
+# The engine runs in the app: speech on the Neural Engine (Core ML) and cleanup with llama.cpp on the GPU (Metal),
+# linked statically from a pinned source build (scripts/build-llama.sh; needs cmake, not Xcode).
+LLAMA_DIR ?= $(BUILD_DIR)/llama
+LLAMA_STAMP = $(LLAMA_DIR)/.version
+ENGINE_OBJ = $(BUILD_DIR)/engine/tw_cleanup.o
+BRIDGING_HEADER = Sources/Engine/Native/TellWellEngine-Bridging.h
+ENGINE_LINK = $(ENGINE_OBJ) \
+	$(LLAMA_DIR)/lib/libllama.a $(LLAMA_DIR)/lib/libggml.a $(LLAMA_DIR)/lib/libggml-cpu.a \
+	$(LLAMA_DIR)/lib/libggml-metal.a $(LLAMA_DIR)/lib/libggml-base.a \
+	-lc++ -framework Metal -framework Accelerate
 
 # Pick the icon source based on which bundle we are building. Dev builds get
 # a distinct hammer-on-waveform icon so a developer's dock shows at a glance
@@ -60,33 +76,27 @@ endif
 
 all: $(APP_EXECUTABLE_TARGET)
 
-$(APP_EXECUTABLE_TARGET): $(SOURCES) Info.plist $(ICON_ICNS)
+$(LLAMA_STAMP): scripts/build-llama.sh
+	LLAMA_OUT="$(LLAMA_DIR)" scripts/build-llama.sh
+
+$(ENGINE_OBJ): Sources/Engine/Native/tw_cleanup.cpp Sources/Engine/Native/tw_cleanup.h $(LLAMA_STAMP)
+	@mkdir -p "$(dir $@)"
+	clang++ -std=c++17 -O2 -arch arm64 -mmacosx-version-min=$(MIN_MACOS) -I "$(LLAMA_DIR)/include" -c $< -o $@
+
+$(APP_EXECUTABLE_TARGET): $(SOURCES) Info.plist $(ICON_ICNS) $(ENGINE_OBJ)
+	@if [ "$(ARCH)" != "arm64" ]; then echo "TellWell needs Apple Silicon: build with ARCH=arm64" >&2; exit 1; fi
 	@mkdir -p "$(MACOS_DIR)" "$(RESOURCES)"
-ifeq ($(ARCH),universal)
 	swiftc \
 		-parse-as-library \
-		-o "$(MACOS_DIR)/$(APP_NAME)-arm64" \
-		-sdk $(shell xcrun --show-sdk-path) \
-		-target arm64-apple-macosx13.0 \
-		$(SOURCES)
-	swiftc \
-		-parse-as-library \
-		-o "$(MACOS_DIR)/$(APP_NAME)-x86_64" \
-		-sdk $(shell xcrun --show-sdk-path) \
-		-target x86_64-apple-macosx13.0 \
-		$(SOURCES)
-	lipo -create -output "$(MACOS_DIR)/$(APP_NAME)" \
-		"$(MACOS_DIR)/$(APP_NAME)-arm64" \
-		"$(MACOS_DIR)/$(APP_NAME)-x86_64"
-	@rm "$(MACOS_DIR)/$(APP_NAME)-arm64" "$(MACOS_DIR)/$(APP_NAME)-x86_64"
-else
-	swiftc \
-		-parse-as-library \
+		-O \
 		-o "$(MACOS_DIR)/$(APP_NAME)" \
 		-sdk $(shell xcrun --show-sdk-path) \
-		-target $(ARCH)-apple-macosx13.0 \
-		$(SOURCES)
-endif
+		-target arm64-apple-macosx$(MIN_MACOS) \
+		-import-objc-header $(BRIDGING_HEADER) \
+		$(SOURCES) \
+		$(ENGINE_LINK)
+	@mkdir -p "$(RESOURCES)/Licenses"
+	@cp "$(LLAMA_DIR)/LICENSE" "$(RESOURCES)/Licenses/llama.cpp-LICENSE.txt"
 	@cp Info.plist "$(CONTENTS)/"
 	@plutil -replace CFBundleName -string "$(APP_NAME)" "$(CONTENTS)/Info.plist"
 	@plutil -replace CFBundleDisplayName -string "$(APP_NAME)" "$(CONTENTS)/Info.plist"
@@ -107,7 +117,8 @@ typecheck:
 		-typecheck \
 		-warnings-as-errors \
 		-sdk $(shell xcrun --show-sdk-path) \
-		-target $(ARCH)-apple-macosx13.0 \
+		-target $(ARCH)-apple-macosx$(MIN_MACOS) \
+		-import-objc-header $(BRIDGING_HEADER) \
 		$(SOURCES)
 
 $(TEST_CONTEXT_HARNESS): Sources/AppState.swift Sources/SettingsView.swift Tests/generate-context-capture-harness.rb
@@ -125,7 +136,7 @@ test: $(TEST_CONTEXT_HARNESS) $(TEST_DISPATCH_HARNESS)
 		-warnings-as-errors \
 		-o "$(TEST_RUNNER)" \
 		-sdk $(shell xcrun --show-sdk-path) \
-		-target $(ARCH)-apple-macosx13.0 \
+		-target $(ARCH)-apple-macosx$(MIN_MACOS) \
 		$(TEST_PRODUCTION_SOURCES) \
 		$(TEST_SOURCES) \
 		"$(TEST_CONTEXT_HARNESS)" \

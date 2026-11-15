@@ -164,8 +164,7 @@ struct GeneralSettingsView: View {
     @State private var showMutedHint = false
     @State private var copiedBuildInfo = false
     @State private var copiedBuildInfoResetWorkItem: DispatchWorkItem?
-    @State private var engineStatus: LocalEngine.Status?
-    @State private var engineChecked = false
+    @AppStorage("engine_screen_words") private var screenWordsEnabled = true
     @ObservedObject private var updateManager = UpdateManager.shared
 
     private var appDisplayName: String {
@@ -479,55 +478,14 @@ struct GeneralSettingsView: View {
     // MARK: Speech Engine
 
     private var engineSection: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            if let status = engineStatus {
-                Label("Running on this Mac", systemImage: "checkmark.circle.fill")
-                    .foregroundStyle(.green)
-                engineInfoRow("Speech recognition", status.speechDescription)
-                engineInfoRow("Cleanup model", status.cleanupDescription)
-                engineInfoRow("Vocabulary boosting", status.boosting ? "On" : "Off")
-                engineInfoRow("Learning from corrections", status.learning ? "On (\(status.learnedTerms) learned)" : "Off")
-                engineInfoRow("Screen words", status.screenWords ? "On" : "Off")
-                Text("Your voice and text stay on this Mac.")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-                Text("Engine options are set in Terminal with freeflowctl, for example freeflowctl boost on.")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-            } else if engineChecked {
-                Label("Not running", systemImage: "exclamationmark.triangle.fill")
-                    .foregroundStyle(.orange)
-                Text("\(AppName.displayName) needs its engine to transcribe. Install or restart it (Apple Silicon) with this command in Terminal:")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-                EngineInstallCommandView()
-            } else {
-                ProgressView().controlSize(.small)
-            }
-            Button("Check again") {
-                Task { await refreshEngine() }
-            }
-            .buttonStyle(.link)
-            .font(.caption)
-        }
-        .task { await refreshEngine() }
-    }
-
-    private func refreshEngine() async {
-        engineStatus = await LocalEngine.probe()
-        engineChecked = true
-    }
-
-    private func engineInfoRow(_ title: String, _ value: String) -> some View {
-        HStack {
-            Text(title)
-            Spacer()
-            Text(value)
+        VStack(alignment: .leading, spacing: 12) {
+            ModelsView()
+            Toggle("Spell names and terms the way they appear on screen", isOn: $screenWordsEnabled)
+            Text("Reads the words in the context screenshot on this Mac (needs Screen Recording). Nothing is stored or sent.")
+                .font(.caption)
                 .foregroundStyle(.secondary)
-                .lineLimit(1)
-                .truncationMode(.middle)
+                .fixedSize(horizontal: false, vertical: true)
         }
-        .font(.subheadline)
     }
 
     private var hotkeySection: some View {
