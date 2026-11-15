@@ -11,12 +11,33 @@ struct ModelsView: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
+            if !ModelStore.systemSupported {
+                Label("\(AppName.displayName)'s speech models need macOS 14 (Sonoma) or later.",
+                      systemImage: "exclamationmark.triangle.fill")
+                    .foregroundStyle(.orange)
+                    .fixedSize(horizontal: false, vertical: true)
+            } else {
+                content
+            }
+            Text("Your voice and text never leave this Mac.")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+        }
+        .onAppear {
+            store.refresh()
+            oldEngine.refresh()
+            if startAutomatically && store.state == .missing && ModelStore.systemSupported { store.download() }
+        }
+    }
+
+    @ViewBuilder private var content: some View {
             switch store.state {
             case .ready:
                 Label("Ready on this Mac", systemImage: "checkmark.circle.fill")
                     .foregroundStyle(.green)
                 row("waveform", "Speech recognition", "NVIDIA Parakeet v2 (English), Neural Engine")
                 row("text.badge.checkmark", "Cleanup", "S1-mini, GPU")
+                if oldEngine.isInstalled { oldEngineCard }
             case .missing:
                 Text("\(AppName.displayName) runs speech recognition and cleanup on your Mac. It needs to download its models once (about \(Self.totalMB) MB).")
                     .fixedSize(horizontal: false, vertical: true)
@@ -34,14 +55,24 @@ struct ModelsView: View {
                     .fixedSize(horizontal: false, vertical: true)
                 Button("Try again") { store.download() }
             }
-            Text("Your voice and text never leave this Mac.")
-                .font(.caption)
-                .foregroundStyle(.secondary)
+    }
+
+    @ObservedObject private var oldEngine = OldEngine.shared
+
+    private var oldEngineCard: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            Text("The separate engine from earlier versions is still installed"
+                 + (oldEngine.sizeBytes.map { " (\(ByteCountFormatter.string(fromByteCount: $0, countStyle: .file)))" } ?? "")
+                 + ". \(AppName.displayName) doesn't need it any more.")
+                .font(.callout)
+                .fixedSize(horizontal: false, vertical: true)
+            Button("Remove old engine…") { oldEngine.confirmAndRemove() }
+            if let error = oldEngine.error {
+                Text(error).font(.caption).foregroundStyle(.orange)
+            }
         }
-        .onAppear {
-            store.refresh()
-            if startAutomatically && store.state == .missing { store.download() }
-        }
+        .padding(10)
+        .background(RoundedRectangle(cornerRadius: 8).fill(Color.secondary.opacity(0.08)))
     }
 
     private func row(_ icon: String, _ title: String, _ value: String) -> some View {

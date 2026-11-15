@@ -836,6 +836,14 @@ final class UpdateManager: ObservableObject {
             // Clean up DMG (detach happens in defer above, delete temp dir)
             try? fm.removeItem(at: tempDir)
 
+            // Install only an app signed by the same developer as this one (checked on the copy that will be installed).
+            let verification = await Task.detached { CodeSignatureCheck.verifyMatchesRunningApp(stagedApp) }.value
+            if case .failure(let failure) = verification {
+                updateStatus = .error(failure.message)
+                try? fm.removeItem(at: stagingDir)
+                return
+            }
+
             // MARK: Replace & relaunch
             updateStatus = .readyToRelaunch
             replaceAndRelaunch(stagedApp: stagedApp, stagingDir: stagingDir)

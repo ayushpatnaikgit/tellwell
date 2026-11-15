@@ -65,6 +65,8 @@ final class ModelStore: ObservableObject {
         size: 381_565_696, sha256: "ff7dfbc19d7220ac7e1f7cd88bc95da3db7e7e7893a35ea552895727605abddc")
 
     nonisolated static let totalBytes: Int64 = speechZip.size + cleanupFile.size
+    /// The Core ML speech models need macOS 14 (they are spec version 8); the app itself builds for 13.
+    nonisolated static var systemSupported: Bool { ProcessInfo.processInfo.isOperatingSystemAtLeast(OperatingSystemVersion(majorVersion: 14, minorVersion: 0, patchVersion: 0)) }
 
     nonisolated static var directory: URL {
         // TELLWELL_MODELS_DIR: for development and tests only (e.g. keep test downloads on another disk).
