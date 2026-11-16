@@ -18,6 +18,7 @@ TEST_PRODUCTION_SOURCES = \
 	Sources/Engine/SequenceMatcher.swift \
 	Sources/Engine/ScreenWords.swift \
 	Sources/Engine/CleanupText.swift \
+	Sources/Engine/WindowStitch.swift \
 	Sources/APIConfigurationDraft.swift \
 	Sources/AppContextService.swift \
 	Sources/AppName.swift \
