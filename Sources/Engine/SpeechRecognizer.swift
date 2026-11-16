@@ -5,7 +5,7 @@ import Foundation
 /// Speech to text with NVIDIA Parakeet TDT 0.6B v2 (English) on the Neural Engine, through Core ML.
 ///
 /// The model takes fixed 15 s windows. Longer audio is split into windows overlapping by 3 s and stitched at the word
-/// boundary nearest the middle of each overlap, using token timestamps. (From freeflow-local's Neural Engine helper,
+/// boundary nearest the middle of each overlap, using token timestamps (WindowStitch). (From freeflow-local's Neural Engine helper,
 /// adapted to FluidInference's v2 Core ML bundle.) Audio stays in memory.
 final class SpeechRecognizer: @unchecked Sendable {  // used only on the engine's serial work queue
     static let sampleRate = 16_000
@@ -141,44 +141,20 @@ final class SpeechRecognizer: @unchecked Sendable {  // used only on the engine'
         return tokens
     }
 
-    // Word starts are marked with a leading space in this vocabulary ("▁" in SentencePiece files).
-    private func startsWord(_ t: Token) -> Bool { vocab[t.id].hasPrefix(" ") || vocab[t.id].hasPrefix("▁") }
-
-    /// The word that starts at `tokens[i]`, lowercased and without punctuation.
-    private func word(_ tokens: [Token], at i: Int) -> String {
-        var end = i + 1
-        while end < tokens.count && !startsWord(tokens[end]) { end += 1 }
-        return tokens[i..<end].map { vocab[$0.id] }.joined().lowercased().filter { $0.isLetter || $0.isNumber }
-    }
-
     func transcribe(_ samples: [Float]) throws -> String {
         guard samples.count >= 160 else { return "" }
-        var all: [Token] = []
+        var all: [WindowStitch.Token] = []
         var start = 0
         while true {
             let end = min(start + windowSamples, samples.count)
             let offset = Double(start) / Double(Self.sampleRate)
-            var tokens = try window(samples[start..<end]).map { Token(id: $0.id, time: $0.time + offset) }
-            if start > 0 {
-                // Overlap with the previous window is [offset, offset + 3 s). Cut both at the first word starting at or
-                // after its midpoint, so each word comes from exactly one window.
+            let tokens = try window(samples[start..<end]).map { WindowStitch.Token(id: $0.id, time: $0.time + offset) }
+            if start == 0 {
+                all = tokens
+            } else {
                 let midpoint = offset + Double(windowSamples - strideSamples) / Double(Self.sampleRate) / 2
-                var cutTime = midpoint
-                var cutWord: String?
-                if let cut = all.firstIndex(where: { startsWord($0) && $0.time >= midpoint }) {
-                    cutTime = all[cut].time
-                    cutWord = word(all, at: cut)
-                    all.removeSubrange(cut...)
-                }
-                // Timestamps for the same spoken word differ slightly between windows. Resume at the same word near the
-                // cut; otherwise at the nearest word start; otherwise the first after it.
-                let near = tokens.indices.filter { startsWord(tokens[$0]) && abs(tokens[$0].time - cutTime) <= 0.4 }
-                    .sorted { abs(tokens[$0].time - cutTime) < abs(tokens[$1].time - cutTime) }
-                let from = near.first { word(tokens, at: $0) == cutWord } ?? near.first
-                    ?? tokens.indices.first { startsWord(tokens[$0]) && tokens[$0].time >= cutTime } ?? tokens.count
-                tokens = Array(tokens[from...])
+                all = WindowStitch.join(all, tokens, midpoint: midpoint, vocab: vocab)
             }
-            all += tokens
             if end == samples.count { break }
             start += strideSamples
         }
