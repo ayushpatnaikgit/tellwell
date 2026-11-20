@@ -15,7 +15,7 @@ final class SpeechRecognizer: @unchecked Sendable {  // used only on the engine'
     private let encoderWidth = 1024, decoderWidth = 640, decoderLayers = 2
     private let maxSymbolsPerFrame = 10
 
-    private struct Token { let id: Int; let time: Double }
+    private typealias Token = WindowStitch.Token
 
     private let pre, enc, dec, joint: MLModel
     private let vocab: [String]
@@ -131,10 +131,9 @@ final class SpeechRecognizer: @unchecked Sendable {  // used only on the engine'
         guard let boost, boost.isOn, canBoost else { return stock }
         // Second pass with boosting (the encoder output is reused). Only whole listed terms are taken from it.
         let boosted = try decodeBoosted(encoded, frames, boost)
-        let (tokens, swapped) = boost.acceptTerms(stock: stock.map { .init(id: $0.id, time: $0.time) },
-                                                  boosted: boosted.map { .init(id: $0.id, time: $0.time) }, pieces: pieces)
+        let (tokens, swapped) = boost.acceptTerms(stock: stock, boosted: boosted, pieces: pieces)
         boostedWords += swapped
-        return tokens.map { Token(id: $0.id, time: $0.time) }
+        return tokens
     }
 
     /// Greedy TDT decoding over encoder frames with the Core ML joint (on the Neural Engine).
@@ -153,7 +152,8 @@ final class SpeechRecognizer: @unchecked Sendable {  // used only on the engine'
                 let token = j.featureValue(for: "token_id")!.multiArrayValue![0].int32Value
                 let duration = j.featureValue(for: "duration")!.multiArrayValue![0].intValue
                 if token != blank {
-                    tokens.append(Token(id: Int(token), time: Double(t) * secondsPerFrame))
+                    let prob = j.featureValue(for: "token_prob")?.multiArrayValue?[0].floatValue ?? 1
+                    tokens.append(Token(id: Int(token), time: Double(t) * secondsPerFrame, prob: prob))
                     (decoderOut, h, c) = try decoderStep(token, h, c)
                 }
                 t += duration
@@ -211,13 +211,14 @@ final class SpeechRecognizer: @unchecked Sendable {  // used only on the engine'
     func transcribe(_ samples: [Float], using boost: TermBoost?) throws -> String {
         boostedWords = 0
         guard samples.count >= 160 else { return "" }
+        let listed = boost?.terms ?? []
         let boost = canBoost && boost?.isOn == true ? boost : nil
         var all: [WindowStitch.Token] = []
         var start = 0
         while true {
             let end = min(start + windowSamples, samples.count)
             let offset = Double(start) / Double(Self.sampleRate)
-            let tokens = try window(samples[start..<end], boost: boost).map { WindowStitch.Token(id: $0.id, time: $0.time + offset) }
+            let tokens = try window(samples[start..<end], boost: boost).map { Token(id: $0.id, time: $0.time + offset, prob: $0.prob) }
             if start == 0 {
                 all = tokens
             } else {
@@ -227,8 +228,22 @@ final class SpeechRecognizer: @unchecked Sendable {  // used only on the engine'
             if end == samples.count { break }
             start += strideSamples
         }
-        let text = all.map { vocab[$0.id] }.joined().replacingOccurrences(of: "▁", with: " ")
+        var text = all.map { vocab[$0.id] }.joined().replacingOccurrences(of: "▁", with: " ")
             .trimmingCharacters(in: .whitespaces)
-        return boost.map { $0.spellTerms(text) } ?? text
+        guard !listed.isEmpty else { return text }
+        // Words the recogniser was unsure of that sound like a listed name ("Putnamic" -> Patnaik).
+        var words: [(String, Float)] = []
+        for token in all {
+            let piece = vocab[token.id]
+            if piece.hasPrefix("▁") || piece.hasPrefix(" ") || words.isEmpty {
+                words.append((String(piece.drop(while: { $0 == "▁" || $0 == " " })), token.prob))
+            } else {
+                words[words.count - 1].0 += piece
+                words[words.count - 1].1 = min(words[words.count - 1].1, token.prob)
+            }
+        }
+        let (corrected, fixed) = TermBoost.correctNames(words, terms: listed)
+        if fixed > 0 { text = corrected; boostedWords += fixed }
+        return TermBoost(terms: listed).spellTerms(text)
     }
 }

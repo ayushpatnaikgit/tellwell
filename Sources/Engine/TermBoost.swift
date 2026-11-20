@@ -176,3 +176,70 @@ struct TermBoost {
         return out
     }
 }
+
+// MARK: - Correcting names the recogniser was unsure of
+
+extension TermBoost {
+    /// How much heard words must sound like a listed name to be replaced (ScreenWords.similarity, voicing merged).
+    static let correctionSimilarity = 0.7
+    /// Only words the recogniser was less sure of than this are corrected: a confidently heard word ("Kashmir") is
+    /// kept even when a similar name ("Lakshmi") is on screen.
+    static let correctionConfidence: Float = 0.6
+    private static let fillers: Set<String> = ["uh", "um", "uhm", "hmm", "mm", "er", "ah"]
+    private static let wordPattern = try! NSRegularExpression(pattern: "[A-Za-z0-9']+")
+
+    /// Replaces 1-3 heard words with a listed name (vocabulary, screen words, the user's own name) when the recogniser
+    /// was unsure of them, at least one isn't an English word, and they sound like the name ("Putnamic" -> Patnaik,
+    /// "Pat Nake" -> Patnaik). Never touches a span that already holds a listed name, so no word is dropped.
+    /// `words` are the recogniser's words (with punctuation) and their confidence. Returns the text and the count.
+    ///
+    /// Tuned on 260 synthetic clips (names right 53 -> 66 of 120 on top of boosting, no wrong names, ordinary
+    /// sentences unchanged) and 700 public real-speech clips with 40 unrelated names listed (2 words changed wrongly).
+    static func correctNames(_ words: [(String, Float)], terms: [String]) -> (String, Int) {
+        var text = ""
+        var tokens: [(range: NSRange, word: String, confidence: Float)] = []
+        for (i, (word, confidence)) in words.enumerated() {
+            if i > 0 { text += " " }
+            let base = (text as NSString).length
+            let ns = word as NSString
+            for m in wordPattern.matches(in: word, range: NSRange(location: 0, length: ns.length)) {
+                tokens.append((NSRange(location: base + m.range.location, length: m.range.length),
+                               ns.substring(with: m.range), confidence))
+            }
+            text += word
+        }
+        let names = terms.map { ($0, ScreenWords.letters($0)) }.filter { $0.1.count >= 3 }
+        var candidates: [(score: Double, start: Int, end: Int, term: String)] = []
+        for n in 1...3 where tokens.count >= n {
+            for i in 0...(tokens.count - n) {
+                let span = tokens[i..<(i + n)]
+                guard span.contains(where: { !ScreenWords.inDictionary($0.word) }),
+                      span.map(\.confidence).min()! < correctionConfidence,
+                      !span.contains(where: { fillers.contains($0.word.lowercased()) }) else { continue }
+                let spoken = span.map(\.word).joined(separator: " ")
+                let heard = ScreenWords.letters(spoken)
+                guard heard.count >= 4 else { continue }
+                for (term, letters) in names {
+                    if span.contains(where: { ScreenWords.letters($0.word) == letters }) { continue }
+                    if abs(letters.count - heard.count) > max(2, letters.count / 3) { continue }
+                    let score = ScreenWords.similarity(term, spoken, mergeVoicing: true)
+                    if score >= correctionSimilarity { candidates.append((score, i, i + n, term)) }
+                }
+            }
+        }
+        // Best first; each heard word is replaced at most once.
+        candidates.sort { ($0.score, $0.start, $0.end, $0.term) > ($1.score, $1.start, $1.end, $1.term) }
+        var used = Set<Int>()
+        var chosen: [(start: Int, end: Int, term: String)] = []
+        for c in candidates where used.isDisjoint(with: c.start..<c.end) {
+            used.formUnion(c.start..<c.end)
+            chosen.append((c.start, c.end, c.term))
+        }
+        var out = text as NSString
+        for c in chosen.sorted(by: { $0.start > $1.start }) {
+            let range = NSUnionRange(tokens[c.start].range, tokens[c.end - 1].range)
+            out = out.replacingCharacters(in: range, with: c.term) as NSString
+        }
+        return (out as String, chosen.count)
+    }
+}

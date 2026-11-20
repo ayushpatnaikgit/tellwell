@@ -20,6 +20,7 @@ enum TermBoostTests {
         termList()
         choice()
         wholeTerms()
+        nameCorrection()
         jointScores()
     }
 
@@ -107,6 +108,24 @@ enum TermBoostTests {
 
         // Casing only for whole words: "graph" stays, "grafana" takes the listed spelling.
         TestSupport.expectEqual(boost.spellTerms("the graph in grafana"), "the graph in Grafana")
+    }
+
+    private static func nameCorrection() {
+        let names = ["Ayush", "Patnaik", "Lakshmi", "TellWell"]
+        func fix(_ words: [(String, Float)]) -> String { TermBoost.correctNames(words, terms: names).0 }
+        // An unsure, non-English word that sounds like a listed name becomes the name; the words around it stay.
+        TestSupport.expectEqual(fix([("Hi,", 0.9), ("this", 1), ("is", 1), ("Ayush", 0.9), ("Putnamic.", 0.3)]),
+                                "Hi, this is Ayush Patnaik.")
+        // d/t and b/p count as the same sound.
+        TestSupport.expectEqual(fix([("Ayush", 0.9), ("Podnamic", 0.4)]), "Ayush Patnaik")
+        // Two heard words can become one name.
+        TestSupport.expectEqual(fix([("send", 1), ("to", 1), ("Pat", 0.5), ("Nyke", 0.3)]), "send to Patnaik")
+        // A word the recogniser was sure of is kept, even if a similar name is listed.
+        TestSupport.expectEqual(fix([("in", 1), ("Kashmir.", 0.95)]), "in Kashmir.")
+        // Ordinary English words are never replaced, however unsure.
+        TestSupport.expectEqual(fix([("tell", 0.3), ("well", 0.3)]), "tell well")
+        // Nothing listed, nothing changed.
+        TestSupport.expectEqual(TermBoost.correctNames([("Putnamic", 0.2)], terms: []).0, "Putnamic")
     }
 
     // MARK: - CPU joint
