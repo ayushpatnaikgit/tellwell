@@ -8,6 +8,8 @@ enum TermBoostTests {
     private static let blank = vocab.count
     private static let pieces = TermBoost.pieces(vocab)
     private static func t(_ id: Int, _ time: Double) -> WindowStitch.Token { WindowStitch.Token(id: id, time: time) }
+    /// A word-piece the recogniser was unsure of (only those may be replaced by a boosted term).
+    private static func u(_ id: Int, _ time: Double) -> WindowStitch.Token { WindowStitch.Token(id: id, time: time, prob: 0.3) }
     private static func text(_ tokens: [WindowStitch.Token]) -> String {
         tokens.map { vocab[$0.id] }.joined().replacingOccurrences(of: "▁", with: " ").trimmingCharacters(in: .whitespaces)
     }
@@ -64,7 +66,7 @@ enum TermBoostTests {
 
     private static func wholeTerms() {
         let boost = TermBoost(terms: ["Siddhant", "Grafana"])
-        let stock = [t(5, 0.0), t(6, 0.3), t(10, 0.6)]                                  // "loop in sidhunt"
+        let stock = [t(5, 0.0), t(6, 0.3), u(10, 0.6)]                                  // "loop in sidhunt"
 
         // The boosted pass spelled the whole name where "sidhunt" was heard: it replaces it.
         let (swapped, count) = boost.acceptTerms(stock: stock, boosted: [t(5, 0.0), t(6, 0.3), t(0, 0.6), t(1, 0.7), t(2, 0.8)],
@@ -72,6 +74,12 @@ enum TermBoostTests {
         TestSupport.expectEqual(text(swapped), "loop in siddhant")
         TestSupport.expectEqual(count, 1)
         TestSupport.expectEqual(boost.spellTerms(text(swapped)), "loop in Siddhant")
+
+        // A word the recogniser was sure of is never replaced.
+        let (sure, untouched) = boost.acceptTerms(stock: [t(5, 0.0), t(6, 0.3), t(10, 0.6)],
+                                                  boosted: [t(5, 0.0), t(6, 0.3), t(0, 0.6), t(1, 0.7), t(2, 0.8)], pieces: pieces)
+        TestSupport.expectEqual(text(sure), "loop in sidhunt")
+        TestSupport.expectEqual(untouched, 0)
 
         // Half a name ("sidd") is not a listed term: the ordinary words stay.
         let (partial, none) = boost.acceptTerms(stock: stock, boosted: [t(5, 0.0), t(6, 0.3), t(0, 0.6), t(1, 0.7)], pieces: pieces)
@@ -90,19 +98,19 @@ enum TermBoostTests {
         }
         let full = TermBoost(terms: ["Ayush", "Patnaik"])
         // The boosted "Patnaik" starts where "to" was heard; "Patnaik" was heard anyway.
-        let (kept, _) = full.acceptTerms(stock: [t(6, 0.0), t(3, 0.5), t(4, 0.6), t(5, 0.7)],
+        let (kept, _) = full.acceptTerms(stock: [u(6, 0.0), u(3, 0.5), u(4, 0.6), u(5, 0.7)],
                                          boosted: [t(6, 0.0), t(4, 0.45), t(5, 0.55)], pieces: namePieces)
         TestSupport.expectEqual(nameText(kept), "send to patnaik")
         // "Ayushpatna" is both names run together: swapping in "Ayush" alone would lose the surname.
-        let (joined, _) = full.acceptTerms(stock: [t(0, 0.0), t(1, 0.2), t(2, 0.6)],
+        let (joined, _) = full.acceptTerms(stock: [u(0, 0.0), u(1, 0.2), u(2, 0.6)],
                                            boosted: [t(0, 0.0), t(4, 0.3), t(2, 0.6)], pieces: namePieces)
         TestSupport.expectEqual(nameText(joined), "ayushpatna yak")
         // Only the words that sound like the name are replaced: "to pat nake" keeps "to".
-        let (prefix, _) = full.acceptTerms(stock: [t(6, 0.0), t(3, 0.5), t(4, 0.6), t(7, 0.7)],
+        let (prefix, _) = full.acceptTerms(stock: [u(6, 0.0), u(3, 0.5), u(4, 0.6), u(7, 0.7)],
                                            boosted: [t(6, 0.0), t(4, 0.45), t(5, 0.55)], pieces: namePieces)
         TestSupport.expectEqual(nameText(prefix), "send to patnaik")
         // A word that sounds nothing like the name ("yak" for Patnaik) is not replaced.
-        let (unlike, _) = full.acceptTerms(stock: [t(0, 0.0), t(1, 0.2), t(2, 0.6)],
+        let (unlike, _) = full.acceptTerms(stock: [u(0, 0.0), u(1, 0.2), u(2, 0.6)],
                                            boosted: [t(0, 0.0), t(1, 0.2), t(4, 0.6), t(5, 0.7)], pieces: namePieces)
         TestSupport.expectEqual(nameText(unlike), "ayushpatna yak")
 

@@ -130,7 +130,7 @@ final class SpeechRecognizer: @unchecked Sendable {  // used only on the engine'
         let stock = try decode(encoded, frames)
         guard let boost, boost.isOn, canBoost else { return stock }
         // Second pass with boosting (the encoder output is reused). Only whole listed terms are taken from it.
-        let boosted = try decodeBoosted(encoded, frames, boost)
+        let boosted = boost.beam > 1 ? try decodeBeam(encoded, frames, boost) : try decodeBoosted(encoded, frames, boost)
         let (tokens, swapped) = boost.acceptTerms(stock: stock, boosted: boosted, pieces: pieces)
         boostedWords += swapped
         return tokens
@@ -200,6 +200,121 @@ final class SpeechRecognizer: @unchecked Sendable {  // used only on the engine'
             if duration != 0 { symbols = 0 } else if symbols >= maxSymbolsPerFrame { t += 1; symbols = 0 }
         }
         return tokens
+    }
+
+    // MARK: - Beam search with boosting
+
+    /// One candidate transcript in the beam.
+    private struct Hyp {
+        var tokens: [Token]
+        var score: Float
+        var decoded: [Float]                    // the decoder side of the joint for this transcript
+        var h: MLMultiArray, c: MLMultiArray
+        var active: Set<TermBoost.Partial>
+        var credit: Float                       // bonus given to a name still being spelled; taken back if unfinished
+        var symbols: Int                        // word-pieces emitted at the current frame
+    }
+
+    /// TDT beam search with boosting: keeps `boost.beam` candidate transcripts and lets a listed name compete as a
+    /// whole ("Ayush Pat-naik" against "I use for neck") instead of losing it at the first piece. Candidates are
+    /// compared only when they have consumed the same audio (bucketed by frame), and the bonus for a name that is
+    /// started but not finished is taken back, so half-names don't win on credit.
+    private func decodeBeam(_ encoded: MLMultiArray, _ frames: Int, _ boost: TermBoost) throws -> [Token] {
+        guard let jointScores, frames > 0 else { return [] }
+        let s1 = encoded.strides[1].intValue, s2 = encoded.strides[2].intValue
+        var flat = [Float](repeating: 0, count: encoderWidth * frames)
+        encoded.withUnsafeBufferPointer(ofType: Float.self) { src in
+            for k in 0..<encoderWidth { for t in 0..<frames { flat[k * frames + t] = src[k * s1 + t * s2] } }
+        }
+        let encoderSide = jointScores.encoderProjection(flat, frames: frames)
+        func decoderSide(_ out: MLMultiArray) -> [Float] {
+            let stride = out.strides[1].intValue
+            return out.withUnsafeBufferPointer(ofType: Float.self) { b in (0..<decoderWidth).map { b[$0 * stride] } }
+        }
+        func logSoftmax(_ a: ArraySlice<Float>) -> [Float] {
+            let top = a.max() ?? 0
+            let z = top + log(a.reduce(Float(0)) { $0 + exp($1 - top) })
+            return a.map { $0 - z }
+        }
+        let width = boost.beam
+        let blankID = Int(blank)
+        func prune(_ hyps: [Hyp]) -> [Hyp] {
+            var best: [[Int]: Hyp] = [:]
+            for h in hyps {
+                let key = h.tokens.map(\.id)
+                if let other = best[key], other.score >= h.score { continue }
+                best[key] = h
+            }
+            return Array(best.values.sorted { $0.score > $1.score }.prefix(width))
+        }
+
+        let (d0, h0, c0) = try decoderStep(blank, try zeros([decoderLayers, 1, decoderWidth]), try zeros([decoderLayers, 1, decoderWidth]))
+        var buckets: [Int: [Hyp]] = [0: [Hyp(tokens: [], score: 0, decoded: jointScores.decoderProjection(decoderSide(d0)),
+                                             h: h0, c: c0, active: [], credit: 0, symbols: 0)]]
+        var finished: [Hyp] = []
+        func place(_ hyp: Hyp, at frame: Int) {
+            if frame >= frames { finished.append(hyp) } else { buckets[frame, default: []].append(hyp) }
+        }
+
+        for t in 0..<frames {
+            guard let arriving = buckets.removeValue(forKey: t) else { continue }
+            var current = prune(arriving)
+            while !current.isEmpty {
+                // Expansions of every candidate at this frame; word-pieces wait for the decoder until pruned.
+                var pieceCandidates: [(parent: Hyp, id: Int, duration: Int, score: Float,
+                                       active: Set<TermBoost.Partial>, credit: Float)] = []
+                for hyp in current {
+                    let scores = jointScores.scores(encoder: encoderSide, frame: t, decoder: hyp.decoded)
+                    let lp = logSoftmax(scores[0..<JointScores.tokens])
+                    let dp = logSoftmax(scores[JointScores.tokens...])
+                    // Nothing said here: move on by 1-4 frames (the two likeliest).
+                    for d in (1..<dp.count).sorted(by: { dp[$0] > dp[$1] }).prefix(2) {
+                        var next = hyp
+                        next.score += lp[blankID] + dp[d]
+                        next.symbols = 0
+                        place(next, at: t + d)
+                    }
+                    // Word-pieces: the likeliest ones, plus any plausible piece that continues a listed name.
+                    var ids = Array(lp.indices.filter { $0 != blankID }.sorted { lp[$0] > lp[$1] }.prefix(width))
+                    for id in lp.indices where id != blankID && lp[id] >= boost.floor && !ids.contains(id)
+                        && boost.advance(hyp.active, pieces[id]) != nil { ids.append(id) }
+                    let durations = (0..<dp.count).filter { $0 > 0 || hyp.symbols + 1 < maxSymbolsPerFrame }
+                        .sorted { dp[$0] > dp[$1] }.prefix(2)
+                    for id in ids where lp[id] >= boost.beamFloor {
+                        var bonus: Float, credit: Float, active: Set<TermBoost.Partial>
+                        if let next = boost.advance(hyp.active, pieces[id]) {
+                            // Continuing a name keeps its credit; starting a new one takes back an abandoned one's.
+                            let continuing = next.contains { $0.pos > pieces[id].count }
+                            bonus = boost.beta - (continuing ? 0 : hyp.credit); active = next
+                            // A finished name keeps its bonus; a name still being spelled holds it on credit.
+                            credit = next.contains { $0.pos == boost.keys[$0.term].count }
+                                ? 0 : (continuing ? hyp.credit : 0) + boost.beta
+                        } else {
+                            bonus = -hyp.credit; credit = 0; active = []
+                        }
+                        for d in durations {
+                            pieceCandidates.append((hyp, id, d, hyp.score + lp[id] + dp[d] + bonus, active, credit))
+                        }
+                    }
+                }
+                // Only the best few word-piece expansions are kept, so the decoder runs a few times per step.
+                pieceCandidates.sort { $0.score > $1.score }
+                var sameFrame: [Hyp] = []
+                for cand in pieceCandidates.prefix(width) {
+                    let (out, h, c) = try decoderStep(Int32(cand.id), cand.parent.h, cand.parent.c)
+                    var next = cand.parent
+                    next.tokens.append(Token(id: cand.id, time: Double(t) * secondsPerFrame))
+                    next.score = cand.score
+                    next.decoded = jointScores.decoderProjection(decoderSide(out))
+                    next.h = h; next.c = c
+                    next.active = cand.active; next.credit = cand.credit
+                    if cand.duration == 0 { next.symbols += 1; sameFrame.append(next) } else { next.symbols = 0; place(next, at: t + cand.duration) }
+                }
+                current = prune(sameFrame)
+            }
+        }
+        for (_, hyps) in buckets { finished += hyps }
+        return finished.max { ($0.score - $0.credit) < ($1.score - $1.credit) }?.tokens ?? []
     }
 
     /// The text of `samples`. `boost` lists names and terms (vocabulary, screen words) to favour; empty = ordinary.

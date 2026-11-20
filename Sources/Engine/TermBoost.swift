@@ -19,10 +19,18 @@ struct TermBoost {
     static let minSimilarity = 0.5
 
     let terms: [String]                // as the user or the screen spells them
-    var beta: Float = 6.0              // log-probability bonus per matching piece (8 began inserting wrong names)
+    var beta: Float = 4.0              // log-probability bonus per matching piece (tuned with the beam: 6+ inserted names)
     var floor: Float = -6.0            // never boost pieces less likely than this
     var topK = 20
     var blankMargin: Float = 4.0
+    /// Candidate transcripts kept by the boosted pass's beam search (1 = greedy). 4 took synthetic names from 66 to
+    /// 81 of 120 (with the confidence gate below); 6+ began changing ordinary sentences.
+    var beam = 4
+    /// Heard words are replaced by a boosted term only if the recogniser was less sure of them than this.
+    /// Without it, the beam put names into 18 of 700 real-speech clips ("India" -> Nadia); at 0.8, 3.
+    var acceptConfidence: Float = 0.8
+    /// In beam search, word-pieces less likely than this are never tried.
+    var beamFloor: Float = -10.0
     let keys: [[Character]]            // "▁" + lowercased term, spaces as "▁"
 
     /// A term being spelled out: which term, and how many characters of it have been emitted so far.
@@ -151,6 +159,9 @@ struct TermBoost {
             let first = sw[best.1]
             let replaced = String(out[first.0..<last.1].flatMap { pieces[$0.id] }).trimmingCharacters(in: edges)
             if replaced == spelled { continue }
+            // Only words the recogniser was unsure of may be replaced: a confidently heard "India" stays, even if the
+            // boosted pass found a path through it that spells "Nadia".
+            if out[first.0..<last.1].map(\.prob).min() ?? 1 >= acceptConfidence { continue }
             // Never drop words: skip if the term was already heard among them ("to Patnaik" must not lose "to"), or
             // if they hold much more than the term ("Ayushpatna" is first name and surname run together; swapping in
             // "Ayush" would lose the surname).
