@@ -117,6 +117,7 @@ actor InAppEngine {
         var boost: [String] = []
         if UserDefaults.standard.object(forKey: "engine_speech_boost") as? Bool ?? true {
             let vocabulary = TermBoost.vocabulary(UserDefaults.standard.string(forKey: "custom_vocabulary") ?? "")
+                + TermBoost.ownName(NSFullUserName())
             boost = TermBoost.terms(vocabulary: vocabulary, screen: await peekScreenWords())
         }
         let terms = boost

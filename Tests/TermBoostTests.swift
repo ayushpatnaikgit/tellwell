@@ -31,6 +31,11 @@ enum TermBoostTests {
         TestSupport.expectEqual(TermBoost.terms(vocabulary: (0..<150).map { "Term\($0)" }, screen: []).count,
                                 TermBoost.maxTerms)
         TestSupport.expect(!TermBoost(terms: [" "]).isOn, "a blank term list must not boost")
+        // The account owner's name, word by word; lowercase account names and initials-with-dots aren't names.
+        TestSupport.expectEqual(TermBoost.ownName("Ayesha Rao-Menon"), ["Ayesha", "Rao", "Menon"])
+        TestSupport.expectEqual(TermBoost.ownName("J. R. Tolkien"), ["J", "R", "Tolkien"])
+        TestSupport.expectEqual(TermBoost.terms(vocabulary: TermBoost.ownName("J. R. Tolkien"), screen: []), ["Tolkien"])
+        TestSupport.expectEqual(TermBoost.ownName("admin"), [])
     }
 
     private static func choice() {

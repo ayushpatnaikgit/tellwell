@@ -42,6 +42,15 @@ struct TermBoost {
             .filter { !$0.isEmpty }
     }
 
+    /// The Mac account owner's name ("Ayesha Rao" -> Ayesha, Rao): people dictate their own name often, and on screen
+    /// it mostly appears run together in paths and user names. Words that aren't names (initials, "admin") are left out
+    /// by `terms` (under 3 letters) or are harmless: only words that sound like them are ever replaced.
+    static func ownName(_ fullName: String) -> [String] {
+        fullName.split(whereSeparator: { $0 == " " || $0 == "-" || $0 == "." })
+            .map(String.init)
+            .filter { $0.first?.isUppercase == true && $0.allSatisfy(\.isLetter) }
+    }
+
     /// The list to boost: vocabulary first, then screen words; one spelling per term, at least 3 letters or digits.
     static func terms(vocabulary: [String], screen: [String]) -> [String] {
         var out: [String] = []
