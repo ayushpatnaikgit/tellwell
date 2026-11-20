@@ -4,7 +4,7 @@ import Foundation
 /// weights; no model files.
 enum TermBoostTests {
     // Word-pieces; the blank ("nothing said") is the id after the last one.
-    private static let vocab = ["▁sid", "d", "hant", "▁city", "▁the", "▁loop", "▁in", "▁gra", "fana", "▁graph"]
+    private static let vocab = ["▁sid", "d", "hant", "▁city", "▁the", "▁loop", "▁in", "▁gra", "fana", "▁graph", "▁sidhunt"]
     private static let blank = vocab.count
     private static let pieces = TermBoost.pieces(vocab)
     private static func t(_ id: Int, _ time: Double) -> WindowStitch.Token { WindowStitch.Token(id: id, time: time) }
@@ -58,9 +58,9 @@ enum TermBoostTests {
 
     private static func wholeTerms() {
         let boost = TermBoost(terms: ["Siddhant", "Grafana"])
-        let stock = [t(5, 0.0), t(6, 0.3), t(3, 0.6)]                                   // "loop in city"
+        let stock = [t(5, 0.0), t(6, 0.3), t(10, 0.6)]                                  // "loop in sidhunt"
 
-        // The boosted pass spelled the whole name where "city" was heard: it replaces it.
+        // The boosted pass spelled the whole name where "sidhunt" was heard: it replaces it.
         let (swapped, count) = boost.acceptTerms(stock: stock, boosted: [t(5, 0.0), t(6, 0.3), t(0, 0.6), t(1, 0.7), t(2, 0.8)],
                                                  pieces: pieces)
         TestSupport.expectEqual(text(swapped), "loop in siddhant")
@@ -69,12 +69,36 @@ enum TermBoostTests {
 
         // Half a name ("sidd") is not a listed term: the ordinary words stay.
         let (partial, none) = boost.acceptTerms(stock: stock, boosted: [t(5, 0.0), t(6, 0.3), t(0, 0.6), t(1, 0.7)], pieces: pieces)
-        TestSupport.expectEqual(text(partial), "loop in city")
+        TestSupport.expectEqual(text(partial), "loop in sidhunt")
         TestSupport.expectEqual(none, 0)
 
         // A term the boosted pass found where the ordinary pass heard nothing is never inserted.
         let (silence, _) = boost.acceptTerms(stock: stock, boosted: stock + [t(7, 2.0), t(8, 2.1)], pieces: pieces)
-        TestSupport.expectEqual(text(silence), "loop in city")
+        TestSupport.expectEqual(text(silence), "loop in sidhunt")
+
+        // Boosting never drops words (these used to lose "to" and the run-together surname).
+        let names = ["▁ayush", "patna", "▁yak", "▁to", "▁pat", "naik", "▁send", "nake"]
+        let namePieces = TermBoost.pieces(names)
+        func nameText(_ tokens: [WindowStitch.Token]) -> String {
+            tokens.map { names[$0.id] }.joined().replacingOccurrences(of: "▁", with: " ").trimmingCharacters(in: .whitespaces)
+        }
+        let full = TermBoost(terms: ["Ayush", "Patnaik"])
+        // The boosted "Patnaik" starts where "to" was heard; "Patnaik" was heard anyway.
+        let (kept, _) = full.acceptTerms(stock: [t(6, 0.0), t(3, 0.5), t(4, 0.6), t(5, 0.7)],
+                                         boosted: [t(6, 0.0), t(4, 0.45), t(5, 0.55)], pieces: namePieces)
+        TestSupport.expectEqual(nameText(kept), "send to patnaik")
+        // "Ayushpatna" is both names run together: swapping in "Ayush" alone would lose the surname.
+        let (joined, _) = full.acceptTerms(stock: [t(0, 0.0), t(1, 0.2), t(2, 0.6)],
+                                           boosted: [t(0, 0.0), t(4, 0.3), t(2, 0.6)], pieces: namePieces)
+        TestSupport.expectEqual(nameText(joined), "ayushpatna yak")
+        // Only the words that sound like the name are replaced: "to pat nake" keeps "to".
+        let (prefix, _) = full.acceptTerms(stock: [t(6, 0.0), t(3, 0.5), t(4, 0.6), t(7, 0.7)],
+                                           boosted: [t(6, 0.0), t(4, 0.45), t(5, 0.55)], pieces: namePieces)
+        TestSupport.expectEqual(nameText(prefix), "send to patnaik")
+        // A word that sounds nothing like the name ("yak" for Patnaik) is not replaced.
+        let (unlike, _) = full.acceptTerms(stock: [t(0, 0.0), t(1, 0.2), t(2, 0.6)],
+                                           boosted: [t(0, 0.0), t(1, 0.2), t(4, 0.6), t(5, 0.7)], pieces: namePieces)
+        TestSupport.expectEqual(nameText(unlike), "ayushpatna yak")
 
         // Casing only for whole words: "graph" stays, "grafana" takes the listed spelling.
         TestSupport.expectEqual(boost.spellTerms("the graph in grafana"), "the graph in Grafana")

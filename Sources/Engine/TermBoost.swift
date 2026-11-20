@@ -15,6 +15,8 @@ struct TermBoost {
     typealias Token = WindowStitch.Token
 
     static let maxTerms = 100
+    /// How much the heard words must sound like a term to be replaced by it (ScreenWords.similarity, 0-1).
+    static let minSimilarity = 0.5
 
     let terms: [String]                // as the user or the screen spells them
     var beta: Float = 6.0              // log-probability bonus per matching piece (8 began inserting wrong names)
@@ -128,9 +130,25 @@ struct TermBoost {
             guard whole.contains(spelled.trimmingCharacters(in: .punctuationCharacters)) else { continue }
             let start = w.2, end = k + 1 < bw.count ? bw[k + 1].2 : .infinity
             let sw = Self.words(out, pieces: pieces).filter { $0.2 >= start - 0.12 && $0.2 < end - 0.01 }
-            guard let first = sw.first, let last = sw.last else { continue }   // never insert a term into silence
+            guard let last = sw.last else { continue }                        // never insert a term into silence
+            // Replace only the heard words that sound like the term: of the spans ending at the last word, the most
+            // similar one ("pat nake", not "to pat nake"), and none if nothing sounds like it ("yak" for Patnaik).
+            func text(_ i: Int) -> String {
+                String(out[sw[i].0..<last.1].flatMap { pieces[$0.id] }).replacingOccurrences(of: "▁", with: " ")
+            }
+            let scored = sw.indices.map { (ScreenWords.similarity(spelled.replacingOccurrences(of: "▁", with: " "), text($0)), $0) }
+            guard let best = scored.max(by: { $0.0 < $1.0 || ($0.0 == $1.0 && $0.1 < $1.1) }),
+                  best.0 >= Self.minSimilarity else { continue }
+            let first = sw[best.1]
             let replaced = String(out[first.0..<last.1].flatMap { pieces[$0.id] }).trimmingCharacters(in: edges)
             if replaced == spelled { continue }
+            // Never drop words: skip if the term was already heard among them ("to Patnaik" must not lose "to"), or
+            // if they hold much more than the term ("Ayushpatna" is first name and surname run together; swapping in
+            // "Ayush" would lose the surname).
+            let heard = replaced.split(separator: "▁").map { $0.filter { $0.isLetter || $0.isNumber } }
+            let term = spelled.filter { $0.isLetter || $0.isNumber }
+            if heard.contains(term) { continue }
+            if heard.joined().count > term.count + max(2, term.count / 3) { continue }
             out.replaceSubrange(first.0..<last.1, with: boosted[w.0..<w.1])
             swapped += 1
         }
