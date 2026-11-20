@@ -113,8 +113,16 @@ actor InAppEngine {
     func transcribe(fileURL: URL) async throws -> String {
         try await prepare()
         guard let speech else { throw EngineError.modelsMissing }
+        // Names and terms to favour: the user's vocabulary and this dictation's screen words (read while they spoke).
+        var boost: [String] = []
+        if UserDefaults.standard.object(forKey: "engine_speech_boost") as? Bool ?? true {
+            let vocabulary = TermBoost.vocabulary(UserDefaults.standard.string(forKey: "custom_vocabulary") ?? "")
+                + TermBoost.ownName(NSFullUserName())
+            boost = TermBoost.terms(vocabulary: vocabulary, screen: await peekScreenWords())
+        }
+        let terms = boost
         let text = try await onWorkQueue { [speech] in
-            try speech.transcribe(try SpeechRecognizer.samples(from: fileURL))
+            try speech.transcribe(try SpeechRecognizer.samples(from: fileURL), boost: terms)
         }
         touch()
         return CleanupText.stripFillers(text)
@@ -207,6 +215,18 @@ actor InAppEngine {
 
     private func storeScreenWords(_ words: [String], generation: Int) {
         if generation == screenGeneration { screenWords = words }
+    }
+
+    /// This dictation's screen words for the speech recogniser, without using them up (cleanup takes them after).
+    /// Waits at most `screenWordsWait` for reading still in progress, never longer.
+    private func peekScreenWords() async -> [String] {
+        guard screenPending, Date().timeIntervalSince(screenTaskStarted) <= Self.screenWordsMaxAge else { return [] }
+        let generation = screenGeneration
+        let deadline = Date().addingTimeInterval(Self.screenWordsWait)
+        while screenWords == nil && Date() < deadline && generation == screenGeneration {
+            try? await Task.sleep(nanoseconds: 25_000_000)
+        }
+        return generation == screenGeneration ? screenWords ?? [] : []
     }
 
     /// This dictation's screen words: waits at most `screenWordsWait` for reading still in progress, never longer.

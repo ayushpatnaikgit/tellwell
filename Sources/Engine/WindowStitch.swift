@@ -12,6 +12,8 @@ enum WindowStitch {
         let id: Int
         /// Seconds from the start of the audio.
         let time: Double
+        /// How sure the recogniser was of this word-piece (0-1); 1 when unknown.
+        var prob: Float = 1
     }
 
     /// How far apart the same word's start may be between two windows.

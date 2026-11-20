@@ -15,11 +15,16 @@ final class SpeechRecognizer: @unchecked Sendable {  // used only on the engine'
     private let encoderWidth = 1024, decoderWidth = 640, decoderLayers = 2
     private let maxSymbolsPerFrame = 10
 
-    private struct Token { let id: Int; let time: Double }
+    private typealias Token = WindowStitch.Token
 
     private let pre, enc, dec, joint: MLModel
     private let vocab: [String]
     private var blank: Int32 { Int32(vocab.count) }
+    /// The joint network on the CPU with all its scores, for vocabulary boosting (nil if its weights can't be read).
+    private let jointScores: JointScores?
+    private let pieces: [[Character]]
+    /// Words swapped in by boosting in the last transcription (a count only, for the benchmark).
+    private(set) var boostedWords = 0
 
     init(directory: URL) throws {
         func model(_ name: String) throws -> MLModel {
@@ -38,7 +43,12 @@ final class SpeechRecognizer: @unchecked Sendable {  // used only on the engine'
         // Parakeet v2 has 1,024 word-pieces and the blank ("nothing said") is id 1024. The bundle's vocabulary file
         // carries 7 extra entries after them, which the model never produces: ignore them.
         vocab = (0..<min(v.count, 1024)).map { v[String($0)] ?? "" }
+        pieces = TermBoost.pieces(vocab)
+        jointScores = try? JointScores(modelDirectory: directory.appendingPathComponent("JointDecision.mlmodelc"))
     }
+
+    /// Whether vocabulary boosting is available (the joint's weights were read and match the vocabulary).
+    var canBoost: Bool { jointScores != nil && vocab.count + 1 == JointScores.tokens }
 
     /// Builds the Neural Engine kernels now, so the first dictation isn't slow.
     func warmUp() throws { _ = try transcribe([Float](repeating: 0, count: Self.sampleRate)) }
@@ -103,8 +113,9 @@ final class SpeechRecognizer: @unchecked Sendable {  // used only on the engine'
                 o.featureValue(for: "c_out")!.multiArrayValue!)
     }
 
-    /// Greedy TDT decoding of one window (at most 15 s). Token times are relative to the window.
-    private func window(_ samples: ArraySlice<Float>) throws -> [Token] {
+    /// One window (at most 15 s): the ordinary pass, plus whole listed terms from a boosted pass when `boost` is set.
+    /// Token times are relative to the window.
+    private func window(_ samples: ArraySlice<Float>, boost: TermBoost?) throws -> [Token] {
         let audio = try array([1, windowSamples], .float32)
         audio.withUnsafeMutableBufferPointer(ofType: Float.self) { buf, _ in
             buf.initialize(repeating: 0)
@@ -116,6 +127,17 @@ final class SpeechRecognizer: @unchecked Sendable {  // used only on the engine'
             "mel": p.featureValue(for: "mel")!, "mel_length": p.featureValue(for: "mel_length")!]))
         let encoded = e.featureValue(for: "encoder")!.multiArrayValue!               // [1, 1024, T]
         let frames = min(e.featureValue(for: "encoder_length")!.multiArrayValue![0].intValue, encoded.shape[2].intValue)
+        let stock = try decode(encoded, frames)
+        guard let boost, boost.isOn, canBoost else { return stock }
+        // Second pass with boosting (the encoder output is reused). Only whole listed terms are taken from it.
+        let boosted = boost.beam > 1 ? try decodeBeam(encoded, frames, boost) : try decodeBoosted(encoded, frames, boost)
+        let (tokens, swapped) = boost.acceptTerms(stock: stock, boosted: boosted, pieces: pieces)
+        boostedWords += swapped
+        return tokens
+    }
+
+    /// Greedy TDT decoding over encoder frames with the Core ML joint (on the Neural Engine).
+    private func decode(_ encoded: MLMultiArray, _ frames: Int) throws -> [Token] {
         let s1 = encoded.strides[1].intValue, s2 = encoded.strides[2].intValue
         var (decoderOut, h, c) = try decoderStep(blank, try zeros([decoderLayers, 1, decoderWidth]), try zeros([decoderLayers, 1, decoderWidth]))
         let step = try array([1, encoderWidth, 1], .float32)
@@ -130,7 +152,8 @@ final class SpeechRecognizer: @unchecked Sendable {  // used only on the engine'
                 let token = j.featureValue(for: "token_id")!.multiArrayValue![0].int32Value
                 let duration = j.featureValue(for: "duration")!.multiArrayValue![0].intValue
                 if token != blank {
-                    tokens.append(Token(id: Int(token), time: Double(t) * secondsPerFrame))
+                    let prob = j.featureValue(for: "token_prob")?.multiArrayValue?[0].floatValue ?? 1
+                    tokens.append(Token(id: Int(token), time: Double(t) * secondsPerFrame, prob: prob))
                     (decoderOut, h, c) = try decoderStep(token, h, c)
                 }
                 t += duration
@@ -141,14 +164,176 @@ final class SpeechRecognizer: @unchecked Sendable {  // used only on the engine'
         return tokens
     }
 
-    func transcribe(_ samples: [Float]) throws -> String {
+    /// Greedy TDT decoding with vocabulary boosting, scoring with the joint network on the CPU.
+    private func decodeBoosted(_ encoded: MLMultiArray, _ frames: Int, _ boost: TermBoost) throws -> [Token] {
+        guard let jointScores, frames > 0 else { return [] }
+        let s1 = encoded.strides[1].intValue, s2 = encoded.strides[2].intValue
+        var flat = [Float](repeating: 0, count: encoderWidth * frames)       // [1024 x frames], row-major
+        encoded.withUnsafeBufferPointer(ofType: Float.self) { src in
+            for k in 0..<encoderWidth { for t in 0..<frames { flat[k * frames + t] = src[k * s1 + t * s2] } }
+        }
+        let encoderSide = jointScores.encoderProjection(flat, frames: frames)
+        func decoderSide(_ out: MLMultiArray) -> [Float] {
+            let stride = out.strides[1].intValue
+            return out.withUnsafeBufferPointer(ofType: Float.self) { b in (0..<decoderWidth).map { b[$0 * stride] } }
+        }
+        func argmax(_ a: ArraySlice<Float>) -> Int { a.indices.max { a[$0] < a[$1] }! - a.startIndex }
+
+        var (decoderOut, h, c) = try decoderStep(blank, try zeros([decoderLayers, 1, decoderWidth]), try zeros([decoderLayers, 1, decoderWidth]))
+        var decoded = jointScores.decoderProjection(decoderSide(decoderOut))
+        var tokens: [Token] = []
+        var active = Set<TermBoost.Partial>()
+        var t = 0, symbols = 0
+        while t < frames {
+            let scores = jointScores.scores(encoder: encoderSide, frame: t, decoder: decoded)
+            let tokenScores = Array(scores[0..<JointScores.tokens])
+            let stock = argmax(tokenScores[...])
+            let token = boost.choose(tokenScores, stock: stock, blank: Int(blank), pieces: pieces, active: &active)
+            let duration = argmax(scores[JointScores.tokens...])
+            if token != Int(blank) {
+                tokens.append(Token(id: token, time: Double(t) * secondsPerFrame))
+                (decoderOut, h, c) = try decoderStep(Int32(token), h, c)
+                decoded = jointScores.decoderProjection(decoderSide(decoderOut))
+            }
+            t += duration
+            symbols += 1
+            if duration != 0 { symbols = 0 } else if symbols >= maxSymbolsPerFrame { t += 1; symbols = 0 }
+        }
+        return tokens
+    }
+
+    // MARK: - Beam search with boosting
+
+    /// One candidate transcript in the beam.
+    private struct Hyp {
+        var tokens: [Token]
+        var score: Float
+        var decoded: [Float]                    // the decoder side of the joint for this transcript
+        var h: MLMultiArray, c: MLMultiArray
+        var active: Set<TermBoost.Partial>
+        var credit: Float                       // bonus given to a name still being spelled; taken back if unfinished
+        var symbols: Int                        // word-pieces emitted at the current frame
+    }
+
+    /// TDT beam search with boosting: keeps `boost.beam` candidate transcripts and lets a listed name compete as a
+    /// whole ("Ayush Pat-naik" against "I use for neck") instead of losing it at the first piece. Candidates are
+    /// compared only when they have consumed the same audio (bucketed by frame), and the bonus for a name that is
+    /// started but not finished is taken back, so half-names don't win on credit.
+    private func decodeBeam(_ encoded: MLMultiArray, _ frames: Int, _ boost: TermBoost) throws -> [Token] {
+        guard let jointScores, frames > 0 else { return [] }
+        let s1 = encoded.strides[1].intValue, s2 = encoded.strides[2].intValue
+        var flat = [Float](repeating: 0, count: encoderWidth * frames)
+        encoded.withUnsafeBufferPointer(ofType: Float.self) { src in
+            for k in 0..<encoderWidth { for t in 0..<frames { flat[k * frames + t] = src[k * s1 + t * s2] } }
+        }
+        let encoderSide = jointScores.encoderProjection(flat, frames: frames)
+        func decoderSide(_ out: MLMultiArray) -> [Float] {
+            let stride = out.strides[1].intValue
+            return out.withUnsafeBufferPointer(ofType: Float.self) { b in (0..<decoderWidth).map { b[$0 * stride] } }
+        }
+        func logSoftmax(_ a: ArraySlice<Float>) -> [Float] {
+            let top = a.max() ?? 0
+            let z = top + log(a.reduce(Float(0)) { $0 + exp($1 - top) })
+            return a.map { $0 - z }
+        }
+        let width = boost.beam
+        let blankID = Int(blank)
+        func prune(_ hyps: [Hyp]) -> [Hyp] {
+            var best: [[Int]: Hyp] = [:]
+            for h in hyps {
+                let key = h.tokens.map(\.id)
+                if let other = best[key], other.score >= h.score { continue }
+                best[key] = h
+            }
+            return Array(best.values.sorted { $0.score > $1.score }.prefix(width))
+        }
+
+        let (d0, h0, c0) = try decoderStep(blank, try zeros([decoderLayers, 1, decoderWidth]), try zeros([decoderLayers, 1, decoderWidth]))
+        var buckets: [Int: [Hyp]] = [0: [Hyp(tokens: [], score: 0, decoded: jointScores.decoderProjection(decoderSide(d0)),
+                                             h: h0, c: c0, active: [], credit: 0, symbols: 0)]]
+        var finished: [Hyp] = []
+        func place(_ hyp: Hyp, at frame: Int) {
+            if frame >= frames { finished.append(hyp) } else { buckets[frame, default: []].append(hyp) }
+        }
+
+        for t in 0..<frames {
+            guard let arriving = buckets.removeValue(forKey: t) else { continue }
+            var current = prune(arriving)
+            while !current.isEmpty {
+                // Expansions of every candidate at this frame; word-pieces wait for the decoder until pruned.
+                var pieceCandidates: [(parent: Hyp, id: Int, duration: Int, score: Float,
+                                       active: Set<TermBoost.Partial>, credit: Float)] = []
+                for hyp in current {
+                    let scores = jointScores.scores(encoder: encoderSide, frame: t, decoder: hyp.decoded)
+                    let lp = logSoftmax(scores[0..<JointScores.tokens])
+                    let dp = logSoftmax(scores[JointScores.tokens...])
+                    // Nothing said here: move on by 1-4 frames (the two likeliest).
+                    for d in (1..<dp.count).sorted(by: { dp[$0] > dp[$1] }).prefix(2) {
+                        var next = hyp
+                        next.score += lp[blankID] + dp[d]
+                        next.symbols = 0
+                        place(next, at: t + d)
+                    }
+                    // Word-pieces: the likeliest ones, plus any plausible piece that continues a listed name.
+                    var ids = Array(lp.indices.filter { $0 != blankID }.sorted { lp[$0] > lp[$1] }.prefix(width))
+                    for id in lp.indices where id != blankID && lp[id] >= boost.floor && !ids.contains(id)
+                        && boost.advance(hyp.active, pieces[id]) != nil { ids.append(id) }
+                    let durations = (0..<dp.count).filter { $0 > 0 || hyp.symbols + 1 < maxSymbolsPerFrame }
+                        .sorted { dp[$0] > dp[$1] }.prefix(2)
+                    for id in ids where lp[id] >= boost.beamFloor {
+                        var bonus: Float, credit: Float, active: Set<TermBoost.Partial>
+                        if let next = boost.advance(hyp.active, pieces[id]) {
+                            // Continuing a name keeps its credit; starting a new one takes back an abandoned one's.
+                            let continuing = next.contains { $0.pos > pieces[id].count }
+                            bonus = boost.beta - (continuing ? 0 : hyp.credit); active = next
+                            // A finished name keeps its bonus; a name still being spelled holds it on credit.
+                            credit = next.contains { $0.pos == boost.keys[$0.term].count }
+                                ? 0 : (continuing ? hyp.credit : 0) + boost.beta
+                        } else {
+                            bonus = -hyp.credit; credit = 0; active = []
+                        }
+                        for d in durations {
+                            pieceCandidates.append((hyp, id, d, hyp.score + lp[id] + dp[d] + bonus, active, credit))
+                        }
+                    }
+                }
+                // Only the best few word-piece expansions are kept, so the decoder runs a few times per step.
+                pieceCandidates.sort { $0.score > $1.score }
+                var sameFrame: [Hyp] = []
+                for cand in pieceCandidates.prefix(width) {
+                    let (out, h, c) = try decoderStep(Int32(cand.id), cand.parent.h, cand.parent.c)
+                    var next = cand.parent
+                    next.tokens.append(Token(id: cand.id, time: Double(t) * secondsPerFrame))
+                    next.score = cand.score
+                    next.decoded = jointScores.decoderProjection(decoderSide(out))
+                    next.h = h; next.c = c
+                    next.active = cand.active; next.credit = cand.credit
+                    if cand.duration == 0 { next.symbols += 1; sameFrame.append(next) } else { next.symbols = 0; place(next, at: t + cand.duration) }
+                }
+                current = prune(sameFrame)
+            }
+        }
+        for (_, hyps) in buckets { finished += hyps }
+        return finished.max { ($0.score - $0.credit) < ($1.score - $1.credit) }?.tokens ?? []
+    }
+
+    /// The text of `samples`. `boost` lists names and terms (vocabulary, screen words) to favour; empty = ordinary.
+    func transcribe(_ samples: [Float], boost terms: [String] = []) throws -> String {
+        try transcribe(samples, using: terms.isEmpty ? nil : TermBoost(terms: terms))
+    }
+
+    /// The text of `samples`, with a configured boost (or none).
+    func transcribe(_ samples: [Float], using boost: TermBoost?) throws -> String {
+        boostedWords = 0
         guard samples.count >= 160 else { return "" }
+        let listed = boost?.terms ?? []
+        let boost = canBoost && boost?.isOn == true ? boost : nil
         var all: [WindowStitch.Token] = []
         var start = 0
         while true {
             let end = min(start + windowSamples, samples.count)
             let offset = Double(start) / Double(Self.sampleRate)
-            let tokens = try window(samples[start..<end]).map { WindowStitch.Token(id: $0.id, time: $0.time + offset) }
+            let tokens = try window(samples[start..<end], boost: boost).map { Token(id: $0.id, time: $0.time + offset, prob: $0.prob) }
             if start == 0 {
                 all = tokens
             } else {
@@ -158,7 +343,22 @@ final class SpeechRecognizer: @unchecked Sendable {  // used only on the engine'
             if end == samples.count { break }
             start += strideSamples
         }
-        return all.map { vocab[$0.id] }.joined().replacingOccurrences(of: "▁", with: " ")
+        var text = all.map { vocab[$0.id] }.joined().replacingOccurrences(of: "▁", with: " ")
             .trimmingCharacters(in: .whitespaces)
+        guard !listed.isEmpty else { return text }
+        // Words the recogniser was unsure of that sound like a listed name ("Putnamic" -> Patnaik).
+        var words: [(String, Float)] = []
+        for token in all {
+            let piece = vocab[token.id]
+            if piece.hasPrefix("▁") || piece.hasPrefix(" ") || words.isEmpty {
+                words.append((String(piece.drop(while: { $0 == "▁" || $0 == " " })), token.prob))
+            } else {
+                words[words.count - 1].0 += piece
+                words[words.count - 1].1 = min(words[words.count - 1].1, token.prob)
+            }
+        }
+        let (corrected, fixed) = TermBoost.correctNames(words, terms: listed)
+        if fixed > 0 { text = corrected; boostedWords += fixed }
+        return TermBoost(terms: listed).spellTerms(text)
     }
 }

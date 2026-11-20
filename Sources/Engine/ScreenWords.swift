@@ -117,7 +117,14 @@ enum ScreenWords {
     }
 
     /// Rough sound-alike key: similar consonants merged, vowels after the first letter dropped (LoRA = Laura).
-    static func sound(_ text: String) -> String {
+    /// `mergeVoicing` also treats d/t, b/p, g/k and v/f as one sound ("Podnamic" ~ Patnaik), for correcting names.
+    static func sound(_ text: String, mergeVoicing: Bool = false) -> String {
+        guard !mergeVoicing else {
+            let voiceless: [Character: Character] = ["d": "t", "b": "p", "g": "k", "v": "f"]
+            var out = ""
+            for c in sound(text).map({ voiceless[$0] ?? $0 }) where out.last != c { out.append(c) }
+            return out
+        }
         var s = letters(text)
         for (a, b) in sounds { s = s.replacingOccurrences(of: a, with: b) }
         guard let head = s.first else { return s }
@@ -130,9 +137,9 @@ enum ScreenWords {
     }
 
     /// Mean of sound-alike and spelling similarity; either alone matched too much.
-    static func similarity(_ word: String, _ spoken: String) -> Double {
+    static func similarity(_ word: String, _ spoken: String, mergeVoicing: Bool = false) -> Double {
         let byLetters = SequenceMatcher(letters(word), letters(spoken)).ratio()
-        let a = sound(word), b = sound(spoken)
+        let a = sound(word, mergeVoicing: mergeVoicing), b = sound(spoken, mergeVoicing: mergeVoicing)
         let bySound = a.count >= 2 ? SequenceMatcher(a, b).ratio() : 0.0
         return (byLetters + bySound) / 2
     }
