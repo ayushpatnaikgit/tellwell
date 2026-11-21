@@ -127,17 +127,49 @@ final class SpeechRecognizer: @unchecked Sendable {  // used only on the engine'
             "mel": p.featureValue(for: "mel")!, "mel_length": p.featureValue(for: "mel_length")!]))
         let encoded = e.featureValue(for: "encoder")!.multiArrayValue!               // [1, 1024, T]
         let frames = min(e.featureValue(for: "encoder_length")!.multiArrayValue![0].intValue, encoded.shape[2].intValue)
-        let stock = try decode(encoded, frames)
+        var checkpoints: [Checkpoint] = []
+        let stock = try decode(encoded, frames, checkpoints: &checkpoints)
         guard let boost, boost.isOn, canBoost else { return stock }
         // Second pass with boosting (the encoder output is reused). Only whole listed terms are taken from it.
-        let boosted = boost.beam > 1 ? try decodeBeam(encoded, frames, boost) : try decodeBoosted(encoded, frames, boost)
+        let boosted: [Token]
+        if boost.beam > 1 {
+            // Only around heard words a listed term could replace: a word before to two after, starting from the
+            // ordinary pass's decoder state there. Elsewhere the result would be discarded anyway.
+            let runs = boost.candidateRuns(stock: stock, pieces: pieces)
+            guard !runs.isEmpty else { return stock }
+            let words = TermBoost.words(stock, pieces: pieces)
+            var spans: [(from: Int, to: Int)] = []                    // word ranges, merged
+            for run in runs {
+                let span = (from: max(0, run.lowerBound - 1), to: min(words.count, run.upperBound + 3))
+                if let last = spans.last, span.from <= last.to { spans[spans.count - 1].to = max(last.to, span.to) }
+                else { spans.append(span) }
+            }
+            let encoderSide = try encoderSide(encoded, frames)
+            var spliced: [Token] = []
+            var next = 0                                               // next stock token to copy
+            for span in spans {
+                let start = checkpoints[span.from]
+                let endToken = span.to < words.count ? words[span.to].0 : stock.count
+                let endFrame = span.to < words.count ? checkpoints[span.to].frame : frames
+                spliced += stock[next..<start.token]
+                spliced += try decodeBeam(encoderSide, from: start, to: endFrame, boost)
+                next = endToken
+            }
+            boosted = spliced + stock[next...]
+        } else {
+            boosted = try decodeBoosted(encoded, frames, boost)
+        }
         let (tokens, swapped) = boost.acceptTerms(stock: stock, boosted: boosted, pieces: pieces)
         boostedWords += swapped
         return tokens
     }
 
-    /// Greedy TDT decoding over encoder frames with the Core ML joint (on the Neural Engine).
-    private func decode(_ encoded: MLMultiArray, _ frames: Int) throws -> [Token] {
+    /// The decoder's state just before a word was emitted by the ordinary pass, so the boosted pass can start there.
+    private struct Checkpoint { let token: Int; let frame: Int; let out, h, c: MLMultiArray }
+
+    /// Greedy TDT decoding over encoder frames with the Core ML joint (on the Neural Engine). `checkpoints` gets the
+    /// decoder state at the start of every word.
+    private func decode(_ encoded: MLMultiArray, _ frames: Int, checkpoints: inout [Checkpoint]) throws -> [Token] {
         let s1 = encoded.strides[1].intValue, s2 = encoded.strides[2].intValue
         var (decoderOut, h, c) = try decoderStep(blank, try zeros([decoderLayers, 1, decoderWidth]), try zeros([decoderLayers, 1, decoderWidth]))
         let step = try array([1, encoderWidth, 1], .float32)
@@ -153,6 +185,9 @@ final class SpeechRecognizer: @unchecked Sendable {  // used only on the engine'
                 let duration = j.featureValue(for: "duration")!.multiArrayValue![0].intValue
                 if token != blank {
                     let prob = j.featureValue(for: "token_prob")?.multiArrayValue?[0].floatValue ?? 1
+                    if tokens.isEmpty || pieces[Int(token)].first == "▁" {
+                        checkpoints.append(Checkpoint(token: tokens.count, frame: t, out: decoderOut, h: h, c: c))
+                    }
                     tokens.append(Token(id: Int(token), time: Double(t) * secondsPerFrame, prob: prob))
                     (decoderOut, h, c) = try decoderStep(token, h, c)
                 }
@@ -219,14 +254,20 @@ final class SpeechRecognizer: @unchecked Sendable {  // used only on the engine'
     /// whole ("Ayush Pat-naik" against "I use for neck") instead of losing it at the first piece. Candidates are
     /// compared only when they have consumed the same audio (bucketed by frame), and the bonus for a name that is
     /// started but not finished is taken back, so half-names don't win on credit.
-    private func decodeBeam(_ encoded: MLMultiArray, _ frames: Int, _ boost: TermBoost) throws -> [Token] {
+    /// The encoder side of the CPU joint for every frame of the window.
+    private func encoderSide(_ encoded: MLMultiArray, _ frames: Int) throws -> [Float] {
         guard let jointScores, frames > 0 else { return [] }
         let s1 = encoded.strides[1].intValue, s2 = encoded.strides[2].intValue
         var flat = [Float](repeating: 0, count: encoderWidth * frames)
         encoded.withUnsafeBufferPointer(ofType: Float.self) { src in
             for k in 0..<encoderWidth { for t in 0..<frames { flat[k * frames + t] = src[k * s1 + t * s2] } }
         }
-        let encoderSide = jointScores.encoderProjection(flat, frames: frames)
+        return jointScores.encoderProjection(flat, frames: frames)
+    }
+
+    /// Beam search from the ordinary pass's state at `start` until frame `frames`; returns the tokens it adds.
+    private func decodeBeam(_ encoderSide: [Float], from start: Checkpoint, to frames: Int, _ boost: TermBoost) throws -> [Token] {
+        guard let jointScores, frames > start.frame else { return [] }
         func decoderSide(_ out: MLMultiArray) -> [Float] {
             let stride = out.strides[1].intValue
             return out.withUnsafeBufferPointer(ofType: Float.self) { b in (0..<decoderWidth).map { b[$0 * stride] } }
@@ -248,15 +289,14 @@ final class SpeechRecognizer: @unchecked Sendable {  // used only on the engine'
             return Array(best.values.sorted { $0.score > $1.score }.prefix(width))
         }
 
-        let (d0, h0, c0) = try decoderStep(blank, try zeros([decoderLayers, 1, decoderWidth]), try zeros([decoderLayers, 1, decoderWidth]))
-        var buckets: [Int: [Hyp]] = [0: [Hyp(tokens: [], score: 0, decoded: jointScores.decoderProjection(decoderSide(d0)),
-                                             h: h0, c: c0, active: [], credit: 0, symbols: 0)]]
+        var buckets: [Int: [Hyp]] = [start.frame: [Hyp(tokens: [], score: 0, decoded: jointScores.decoderProjection(decoderSide(start.out)),
+                                                       h: start.h, c: start.c, active: [], credit: 0, symbols: 0)]]
         var finished: [Hyp] = []
         func place(_ hyp: Hyp, at frame: Int) {
             if frame >= frames { finished.append(hyp) } else { buckets[frame, default: []].append(hyp) }
         }
 
-        for t in 0..<frames {
+        for t in start.frame..<frames {
             guard let arriving = buckets.removeValue(forKey: t) else { continue }
             var current = prune(arriving)
             while !current.isEmpty {

@@ -23,7 +23,26 @@ enum TermBoostTests {
         choice()
         wholeTerms()
         nameCorrection()
+        candidates()
         jointScores()
+    }
+
+    /// Where the boosted pass is worth running: only around unsure words that sound like a listed term.
+    private static func candidates() {
+        let boost = TermBoost(terms: ["Siddhant", "Grafana"])
+        // "the loop in sidhunt": only "sidhunt" (unsure, sounds like Siddhant) is a candidate.
+        let runs = boost.candidateRuns(stock: [t(4, 0.0), u(5, 0.3), t(6, 0.6), u(10, 0.9)], pieces: pieces)
+        TestSupport.expect(runs.contains(3...3), "an unsure word that sounds like a term must be a candidate")
+        TestSupport.expect(!runs.contains { $0.contains(1) }, "an unsure word unlike any term is not a candidate")
+        // Every word heard confidently: nothing for the boosted pass to change.
+        TestSupport.expect(boost.candidateRuns(stock: [t(4, 0.0), t(5, 0.3), t(10, 0.9)], pieces: pieces).isEmpty,
+                           "confident words are never candidates")
+        // The prepared similarity is the same as the plain one.
+        for (a, b) in [("patnaik", "putnamic"), ("siddhant", " sidhunt"), ("grafana", " the graph in")] {
+            let plain = ScreenWords.similarity(a, b)
+            let prepared = ScreenWords.Prepared(a).similarity(ScreenWords.Prepared(b))
+            TestSupport.expect(abs(plain - prepared) < 1e-9 || (plain < 0.3 && prepared == 0), "prepared similarity for \(a)")
+        }
     }
 
     private static func termList() {
@@ -91,7 +110,7 @@ enum TermBoostTests {
         TestSupport.expectEqual(text(silence), "loop in sidhunt")
 
         // Boosting never drops words (these used to lose "to" and the run-together surname).
-        let names = ["▁ayush", "patna", "▁yak", "▁to", "▁pat", "naik", "▁send", "nake"]
+        let names = ["▁ayush", "patna", "▁yak", "▁to", "▁pat", "naik", "▁send", "nake", "▁ayushpat", "▁nayak"]
         let namePieces = TermBoost.pieces(names)
         func nameText(_ tokens: [WindowStitch.Token]) -> String {
             tokens.map { names[$0.id] }.joined().replacingOccurrences(of: "▁", with: " ").trimmingCharacters(in: .whitespaces)
@@ -113,6 +132,11 @@ enum TermBoostTests {
         let (unlike, _) = full.acceptTerms(stock: [u(0, 0.0), u(1, 0.2), u(2, 0.6)],
                                            boosted: [t(0, 0.0), t(1, 0.2), t(4, 0.6), t(5, 0.7)], pieces: namePieces)
         TestSupport.expectEqual(nameText(unlike), "ayushpatna yak")
+        // A name that began inside the word before ("ayushpat nayak", boosted "Patnaik" from "pat") is not swapped
+        // in, or part of it would be typed twice ("ayushpat patnaik").
+        let (inside, _) = full.acceptTerms(stock: [WindowStitch.Token(id: 8, time: 0.0, prob: 0.9), u(9, 0.6)],
+                                           boosted: [t(4, 0.3), t(5, 0.4)], pieces: namePieces)
+        TestSupport.expectEqual(nameText(inside), "ayushpat nayak")
 
         // Casing only for whole words: "graph" stays, "grafana" takes the listed spelling.
         TestSupport.expectEqual(boost.spellTerms("the graph in grafana"), "the graph in Grafana")
