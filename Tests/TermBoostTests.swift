@@ -23,7 +23,26 @@ enum TermBoostTests {
         choice()
         wholeTerms()
         nameCorrection()
+        candidates()
         jointScores()
+    }
+
+    /// Where the boosted pass is worth running: only around unsure words that sound like a listed term.
+    private static func candidates() {
+        let boost = TermBoost(terms: ["Siddhant", "Grafana"])
+        // "the loop in sidhunt": only "sidhunt" (unsure, sounds like Siddhant) is a candidate.
+        let runs = boost.candidateRuns(stock: [t(4, 0.0), u(5, 0.3), t(6, 0.6), u(10, 0.9)], pieces: pieces)
+        TestSupport.expect(runs.contains(3...3), "an unsure word that sounds like a term must be a candidate")
+        TestSupport.expect(!runs.contains { $0.contains(1) }, "an unsure word unlike any term is not a candidate")
+        // Every word heard confidently: nothing for the boosted pass to change.
+        TestSupport.expect(boost.candidateRuns(stock: [t(4, 0.0), t(5, 0.3), t(10, 0.9)], pieces: pieces).isEmpty,
+                           "confident words are never candidates")
+        // The prepared similarity is the same as the plain one.
+        for (a, b) in [("patnaik", "putnamic"), ("siddhant", " sidhunt"), ("grafana", " the graph in")] {
+            let plain = ScreenWords.similarity(a, b)
+            let prepared = ScreenWords.Prepared(a).similarity(ScreenWords.Prepared(b))
+            TestSupport.expect(abs(plain - prepared) < 1e-9 || (plain < 0.3 && prepared == 0), "prepared similarity for \(a)")
+        }
     }
 
     private static func termList() {

@@ -144,6 +144,25 @@ enum ScreenWords {
         return (byLetters + bySound) / 2
     }
 
+    /// A string's letters and sound key, worked out once for comparing against many others.
+    struct Prepared {
+        let letters: String, sound: String
+        init(_ text: String) { letters = ScreenWords.letters(text); sound = ScreenWords.sound(text) }
+        /// The same value as `similarity(self, other)` whenever that is 0.3 or more (0 below).
+        func similarity(_ other: Prepared) -> Double {
+            // Neither ratio can exceed 2 * shorter / total length; skip the matching when even that is far off.
+            func bound(_ a: String, _ b: String) -> Double {
+                let total = a.count + b.count
+                return total == 0 ? 0 : 2 * Double(min(a.count, b.count)) / Double(total)
+            }
+            let soundBound = sound.count >= 2 ? bound(sound, other.sound) : 0
+            if (bound(letters, other.letters) + soundBound) / 2 < 0.3 { return 0 }
+            let byLetters = SequenceMatcher(letters, other.letters).ratio()
+            let bySound = sound.count >= 2 ? SequenceMatcher(sound, other.sound).ratio() : 0.0
+            return (byLetters + bySound) / 2
+        }
+    }
+
     private static let spokenToken = try! NSRegularExpression(pattern: "[A-Za-z0-9']+")
 
     static func digits(_ s: String) -> [String] {

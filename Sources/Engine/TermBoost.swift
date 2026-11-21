@@ -123,6 +123,39 @@ struct TermBoost {
 
     private static func startsWord(_ t: Token, _ pieces: [[Character]]) -> Bool { pieces[t.id].first == "▁" }
 
+    /// The runs of heard words a listed term could replace, as word index ranges of `words(stock)`. `acceptTerms`
+    /// replaces only a run that includes a word the recogniser was unsure of, holds not much more than the term, and
+    /// sounds like it; these are the runs that pass those tests (slightly loosened). The boosted pass runs only around
+    /// them, since anywhere else its result would be discarded.
+    func candidateRuns(stock: [Token], pieces: [[Character]]) -> [ClosedRange<Int>] {
+        let ws = Self.words(stock, pieces: pieces)
+        let unsure = ws.map { w in stock[w.0..<w.1].contains { $0.prob < acceptConfidence } }
+        guard unsure.contains(true) else { return [] }
+        let texts = ws.map { w in String(stock[w.0..<w.1].flatMap { pieces[$0.id] }).replacingOccurrences(of: "▁", with: " ") }
+        let lengths = texts.map { ScreenWords.letters($0).count }
+        let listed = terms.map { term -> (ScreenWords.Prepared, Int) in
+            let p = ScreenWords.Prepared(term.lowercased())
+            return (p, p.letters.count + max(2, p.letters.count / 3))
+        }
+        let longest = listed.map(\.1).max() ?? 0
+        var runs: [ClosedRange<Int>] = []
+        for i in ws.indices {
+            var letters = 0, hasUnsure = false, text = ""
+            for j in i..<ws.count {
+                letters += lengths[j]
+                if letters > longest { break }
+                hasUnsure = hasUnsure || unsure[j]
+                text += texts[j]
+                guard hasUnsure else { continue }
+                let heard = ScreenWords.Prepared(text)
+                if listed.contains(where: { letters <= $0.1 && $0.0.similarity(heard) >= Self.minSimilarity - 0.05 }) {
+                    runs.append(i...j)
+                }
+            }
+        }
+        return runs
+    }
+
     /// Words of a token list: (first token index, end index, start time).
     static func words(_ tokens: [Token], pieces: [[Character]]) -> [(Int, Int, Double)] {
         var out: [(Int, Int, Double)] = []

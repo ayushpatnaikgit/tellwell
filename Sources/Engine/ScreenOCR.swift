@@ -38,14 +38,27 @@ enum ScreenOCR {
         guard let big = render(source) else { return [] }
         var passes: [CGImage] = []
         for tile in tiles(big, rows: 3, cols: 2) {
-            passes.append(tile)
-            if let inverted = render(CIImage(cgImage: tile).applyingFilter("CIColorInvert")) { passes.append(inverted) }
+            // Vision reads dark text on light best: a light tile is read as it is, a dark one inverted, and a tile
+            // with both (a dark sidebar beside a light page) both ways. Reading every tile both ways took twice as long.
+            let lightness = brightness(tile)
+            if lightness >= 0.35 { passes.append(tile) }
+            if lightness <= 0.65, let inverted = render(CIImage(cgImage: tile).applyingFilter("CIColorInvert")) { passes.append(inverted) }
         }
         // Sequential: running the passes concurrently was slower (~700 vs ~500 ms on an M4).
         return passes.flatMap(recognise)
     }
 
     private static func render(_ image: CIImage) -> CGImage? { context.createCGImage(image, from: image.extent) }
+
+    /// Average brightness of an image, 0 (black) to 1 (white).
+    static func brightness(_ image: CGImage) -> Double {
+        let source = CIImage(cgImage: image)
+        let average = source.applyingFilter("CIAreaAverage", parameters: [kCIInputExtentKey: CIVector(cgRect: source.extent)])
+        var pixel = [UInt8](repeating: 0, count: 4)
+        context.render(average, toBitmap: &pixel, rowBytes: 4, bounds: CGRect(x: 0, y: 0, width: 1, height: 1),
+                       format: .RGBA8, colorSpace: CGColorSpaceCreateDeviceRGB())
+        return (0.299 * Double(pixel[0]) + 0.587 * Double(pixel[1]) + 0.114 * Double(pixel[2])) / 255
+    }
 
     private static func recognise(_ image: CGImage) -> [String] {
         let request = VNRecognizeTextRequest()
