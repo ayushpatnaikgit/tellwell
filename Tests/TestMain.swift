@@ -19,6 +19,7 @@ struct FreeFlowTests {
         CodeSignatureCheckTests.run()
         WindowStitchTests.run()
         TermBoostTests.run()
+        StreamingAudioTests.run()
         LLMCooldownManagerTests.run()
         PostProcessingServiceTests.run()
         TranscriptionErrorPresentationCoreTests.run()

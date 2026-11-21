@@ -28,6 +28,11 @@ actor InAppEngine {
     private var screenTaskStarted = Date.distantPast
     private static var visionWarmedUp = false
 
+    /// The recording as it is written (long dictations are recognised window by window while the user speaks).
+    nonisolated let streamed = StreamingAudio(firstWindow: SpeechRecognizer.windowLength, step: SpeechRecognizer.windowStep)
+    private var windowCache = WindowCache()
+    private var streaming = false
+
     private let workQueue = DispatchQueue(label: "io.github.ayushpatnaikgit.tellwell.engine", qos: .userInitiated)
 
     enum EngineError: LocalizedError {
@@ -80,6 +85,8 @@ actor InAppEngine {
     func unload() {
         idleTask?.cancel()
         speech = nil
+        windowCache = WindowCache()
+        streamed.reset()
         CleanupModel.unload()
     }
 
@@ -115,18 +122,58 @@ actor InAppEngine {
         try await prepare()
         guard let speech else { throw EngineError.modelsMissing }
         // Names and terms to favour: the user's vocabulary and this dictation's screen words (read while they spoke).
-        var boost: [String] = []
-        if UserDefaults.standard.object(forKey: "engine_speech_boost") as? Bool ?? true {
-            let vocabulary = TermBoost.vocabulary(UserDefaults.standard.string(forKey: "custom_vocabulary") ?? "")
-                + TermBoost.ownName(NSFullUserName())
-            boost = TermBoost.terms(vocabulary: vocabulary, screen: await peekScreenWords())
-        }
-        let terms = boost
+        let terms = boostTerms(screen: await peekScreenWords())
+        // Windows recognised while the user was speaking (long dictations). Let one in progress finish first.
+        let deadline = Date().addingTimeInterval(1)
+        while streaming && Date() < deadline { try? await Task.sleep(nanoseconds: 10_000_000) }
+        let cache = windowCache.url == fileURL ? windowCache : WindowCache()
+        windowCache = WindowCache()
+        if streamed.currentURL == fileURL { streamed.reset() }   // not a newer recording's audio
         let text = try await onWorkQueue { [speech] in
-            try speech.transcribe(try SpeechRecognizer.samples(from: fileURL), boost: terms)
+            try speech.transcribe(try SpeechRecognizer.samples(from: fileURL),
+                                  using: terms.isEmpty ? nil : TermBoost(terms: terms),
+                                  reuse: { start, samples in cache.lookup(start: start, terms: terms, samples: samples) })
         }
         touch()
         return CleanupText.stripFillers(text)
+    }
+
+    /// The names and terms to favour: vocabulary, the user's own name and this dictation's screen words.
+    private func boostTerms(screen: [String]) -> [String] {
+        guard UserDefaults.standard.object(forKey: "engine_speech_boost") as? Bool ?? true else { return [] }
+        let vocabulary = TermBoost.vocabulary(UserDefaults.standard.string(forKey: "custom_vocabulary") ?? "")
+            + TermBoost.ownName(NSFullUserName())
+        return TermBoost.terms(vocabulary: vocabulary, screen: screen)
+    }
+
+    /// Recognises the recording's full windows while the user is still speaking, so after a long dictation only the
+    /// last one is left. Called when the recorder completes a window. Does nothing until this dictation's screen words
+    /// are read (the final pass would use a different name list) or if the models aren't loaded.
+    func recogniseStreamedWindows() async {
+        guard !streaming, let speech else { return }
+        streaming = true
+        defer { streaming = false }
+        while true {
+            let (url, samples) = streamed.snapshot()
+            guard let url else { return }
+            if windowCache.url != url { windowCache = WindowCache(url: url) }
+            guard let start = windowCache.nextStart(available: samples.count, window: SpeechRecognizer.windowLength,
+                                                    step: SpeechRecognizer.windowStep),
+                  let screen = screenWordsIfRead() else { return }
+            let terms = boostTerms(screen: screen)
+            let decoded = try? await onWorkQueue { [speech] in
+                try speech.fullWindow(samples, start: start, using: terms.isEmpty ? nil : TermBoost(terms: terms))
+            }
+            guard let tokens = decoded ?? nil, windowCache.url == url else { return }
+            windowCache.store(start: start, terms: terms,
+                              samples: samples[start..<(start + SpeechRecognizer.windowLength)], tokens: tokens)
+        }
+    }
+
+    /// This dictation's screen words if reading has finished ([] if none are being read), nil while still reading.
+    private func screenWordsIfRead() -> [String]? {
+        guard screenPending, Date().timeIntervalSince(screenTaskStarted) <= Self.screenWordsMaxAge else { return [] }
+        return screenWords
     }
 
     // MARK: - Chat (cleanup and context)

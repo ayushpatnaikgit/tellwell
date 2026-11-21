@@ -102,6 +102,10 @@ final class AudioRecorder: NSObject, ObservableObject, AVCaptureAudioDataOutputS
     /// to a realtime transcription socket. The recorder writes a normalized
     /// 16 kHz mono PCM16 WAV file independently for upload-based transcription.
     var onPCM16Samples: ((Data) -> Void)?
+    /// Called with each buffer of 16 kHz mono Int16 samples just written to the recording file at the given URL, so
+    /// the in-app engine can recognise long dictations while the user speaks. Runs on the capture queue: the handler
+    /// must only copy. Audio stays in memory.
+    var onRecordedSamples: ((URL, UnsafeBufferPointer<Int16>) -> Void)?
     private let recordingConverterLock = OSAllocatedUnfairLock<AVAudioConverter?>(initialState: nil)
     private let pcm16ConverterLock = OSAllocatedUnfairLock<AVAudioConverter?>(initialState: nil)
     private let recordingTargetFormat: AVAudioFormat = {
@@ -404,6 +408,7 @@ final class AudioRecorder: NSObject, ObservableObject, AVCaptureAudioDataOutputS
         if sourceFormat == targetFormat {
             try activeAudioFile.write(from: inputBuffer)
             recordedFrameCount += AVAudioFramePosition(inputBuffer.frameLength)
+            emitRecordedSamples(inputBuffer)
             return
         }
 
@@ -415,6 +420,15 @@ final class AudioRecorder: NSObject, ObservableObject, AVCaptureAudioDataOutputS
         guard outputBuffer.frameLength > 0 else { return }
         try activeAudioFile.write(from: outputBuffer)
         recordedFrameCount += AVAudioFramePosition(outputBuffer.frameLength)
+        emitRecordedSamples(outputBuffer)
+    }
+
+    /// Hands the samples just written to the recording file to `onRecordedSamples` (16 kHz mono Int16 only).
+    private func emitRecordedSamples(_ buffer: AVAudioPCMBuffer) {
+        guard let handler = onRecordedSamples, let url = activeAudioFile?.url,
+              buffer.format.commonFormat == .pcmFormatInt16, buffer.format.channelCount == 1,
+              let channel = buffer.int16ChannelData?[0] else { return }
+        handler(url, UnsafeBufferPointer(start: channel, count: Int(buffer.frameLength)))
     }
 
     private func validatedPCMBufferFormat(
