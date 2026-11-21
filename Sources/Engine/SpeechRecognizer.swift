@@ -9,8 +9,11 @@ import Foundation
 /// adapted to FluidInference's v2 Core ML bundle.) Audio stays in memory.
 final class SpeechRecognizer: @unchecked Sendable {  // used only on the engine's serial work queue
     static let sampleRate = 16_000
-    private let windowSamples = 15 * 16_000
-    private let strideSamples = 12 * 16_000
+    /// Recognition windows: 15 s long, one every 12 s (in samples).
+    static let windowLength = 15 * 16_000
+    static let windowStep = 12 * 16_000
+    private let windowSamples = SpeechRecognizer.windowLength
+    private let strideSamples = SpeechRecognizer.windowStep
     private let secondsPerFrame = 0.08                 // 10 ms mel hop x 8 subsampling
     private let encoderWidth = 1024, decoderWidth = 640, decoderLayers = 2
     private let maxSymbolsPerFrame = 10
@@ -362,8 +365,19 @@ final class SpeechRecognizer: @unchecked Sendable {  // used only on the engine'
         try transcribe(samples, using: terms.isEmpty ? nil : TermBoost(terms: terms))
     }
 
-    /// The text of `samples`, with a configured boost (or none).
-    func transcribe(_ samples: [Float], using boost: TermBoost?) throws -> String {
+    /// A window decoded earlier: its tokens if it was decoded from exactly these samples at this start, else nil.
+    typealias Reuse = (_ start: Int, _ samples: ArraySlice<Float>) -> [WindowStitch.Token]?
+
+    /// Decodes the full window starting at `start` exactly as `transcribe` would, for decoding long dictations while
+    /// the user is still speaking. nil if `samples` don't cover the whole window yet.
+    func fullWindow(_ samples: [Float], start: Int, using boost: TermBoost?) throws -> [WindowStitch.Token]? {
+        guard start >= 0, start + windowSamples <= samples.count else { return nil }
+        let boost = canBoost && boost?.isOn == true ? boost : nil
+        return try window(samples[start..<(start + windowSamples)], boost: boost)
+    }
+
+    /// The text of `samples`, with a configured boost (or none). `reuse` can supply windows decoded earlier.
+    func transcribe(_ samples: [Float], using boost: TermBoost?, reuse: Reuse? = nil) throws -> String {
         boostedWords = 0
         guard samples.count >= 160 else { return "" }
         let listed = boost?.terms ?? []
@@ -373,7 +387,9 @@ final class SpeechRecognizer: @unchecked Sendable {  // used only on the engine'
         while true {
             let end = min(start + windowSamples, samples.count)
             let offset = Double(start) / Double(Self.sampleRate)
-            let tokens = try window(samples[start..<end], boost: boost).map { Token(id: $0.id, time: $0.time + offset, prob: $0.prob) }
+            let slice = samples[start..<end]
+            let decoded = try reuse?(start, slice) ?? window(slice, boost: boost)
+            let tokens = decoded.map { Token(id: $0.id, time: $0.time + offset, prob: $0.prob) }
             if start == 0 {
                 all = tokens
             } else {

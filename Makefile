@@ -19,6 +19,7 @@ TEST_PRODUCTION_SOURCES = \
 	Sources/Engine/ScreenWords.swift \
 	Sources/Engine/CleanupText.swift \
 	Sources/Engine/WindowStitch.swift \
+	Sources/Engine/StreamingAudio.swift \
 	Sources/Engine/TermBoost.swift \
 	Sources/Engine/JointScores.swift \
 	Sources/APIConfigurationDraft.swift \

@@ -2492,6 +2492,18 @@ final class AppState: ObservableObject, @unchecked Sendable {
         }
 
         startRealtimeStreamingIfEnabled()
+        // Long dictations: the in-app engine recognises each full 15-second window while the user is still speaking.
+        // Not with a cloud realtime transcriber, which already streams.
+        if realtimeService == nil {
+            let engine = InAppEngine.shared
+            audioRecorder.onRecordedSamples = { url, samples in
+                if engine.streamed.append(url: url, samples) {
+                    Task.detached(priority: .userInitiated) { await engine.recogniseStreamedWindows() }
+                }
+            }
+        } else {
+            audioRecorder.onRecordedSamples = nil
+        }
 
         // Start engine on background thread so UI isn't blocked
         DispatchQueue.global(qos: .userInitiated).async { [weak self] in
