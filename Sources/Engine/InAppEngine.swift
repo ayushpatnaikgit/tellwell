@@ -11,8 +11,9 @@ import Foundation
 actor InAppEngine {
     static let shared = InAppEngine()
 
-    /// Models are freed after this long without a dictation (they reload in about a second).
-    static let idleUnloadSeconds: TimeInterval = 600
+    /// Models (about 650 MB) are freed after this long without a dictation. Reloading took 0.6-6 s on an M4 (longer
+    /// once macOS has dropped the files from memory), so the first dictation after 10 idle minutes was often slow.
+    static let idleUnloadSeconds: TimeInterval = 3600
     /// At cleanup, wait at most this long for screen reading still in progress (it normally finishes during speech).
     static let screenWordsWait: TimeInterval = 0.5
     /// Screen words older than this (from recording start to cleanup) are ignored.
@@ -132,7 +133,7 @@ actor InAppEngine {
 
     /// An OpenAI-style chat completion: request body in, response body out.
     func chatCompletion(body: Data) async throws -> Data {
-        guard var payload = try JSONSerialization.jsonObject(with: body) as? [String: Any],
+        guard let payload = try JSONSerialization.jsonObject(with: body) as? [String: Any],
               let rawMessages = payload["messages"] as? [[String: Any]] else {
             throw EngineError.generationFailed
         }
@@ -145,6 +146,15 @@ actor InAppEngine {
             if let text = message["content"] as? String { return (role, text) }
             let parts = message["content"] as? [[String: Any]] ?? []
             return (role, parts.compactMap { $0["type"] as? String == "text" ? $0["text"] as? String : nil }.joined())
+        }
+
+        // The context request: describing the activity took the cleanup model 0.6-2.5 s (it wasn't trained for it and
+        // can't see the screenshot), held up the dictation behind it and pushed the cleanup prompt out of its cache.
+        // The app and window it was given say the same thing, at once. Screen words were started above.
+        if !messages.contains(where: { $0.content.contains("RAW_TRANSCRIPTION") }),
+           let summary = CleanupText.contextSummary(messages.last?.content ?? "") {
+            touch()
+            return try Self.response(summary)
         }
 
         var raw: String?
@@ -176,7 +186,12 @@ actor InAppEngine {
             text = CleanupText.restoreUnsupportedTerms(raw: raw, cleaned: text, terms: vocabulary).0
         }
         touch()
-        payload = [
+        return try Self.response(text)
+    }
+
+    /// An OpenAI-style chat completion response carrying `text`.
+    private static func response(_ text: String) throws -> Data {
+        let payload: [String: Any] = [
             "id": "chatcmpl-\(UUID().uuidString)",
             "object": "chat.completion",
             "created": Int(Date().timeIntervalSince1970),

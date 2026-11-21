@@ -70,6 +70,28 @@ enum CleanupText {
         return out + ns.substring(from: last)
     }
 
+    /// For the context request (its user message lists "App:", "Bundle ID:" and "Window:"): a one-line activity
+    /// summary from that metadata, without running a model. nil for any other request (cleanup, Edit Mode).
+    static func contextSummary(_ userMessage: String) -> String? {
+        var fields: [String: String] = [:]
+        for line in userMessage.split(separator: "\n") {
+            for key in ["Bundle ID", "Window"] where line.hasPrefix(key + ": ") {
+                fields[key] = String(line.dropFirst(key.count + 2)).trimmingCharacters(in: .whitespaces)
+            }
+            // The app line can follow the instruction directly: the request's text parts are joined without a break.
+            if fields["App"] == nil, !line.hasPrefix("Window: "), let r = line.range(of: "App: ") {
+                fields["App"] = String(line[r.upperBound...]).trimmingCharacters(in: .whitespaces)
+            }
+        }
+        guard fields["Bundle ID"] != nil, fields["Window"] != nil else { return nil }
+        let known = { (s: String?) -> String? in s.flatMap { $0.isEmpty || $0 == "Unknown" ? nil : $0 } }
+        guard let app = known(fields["App"]) else { return "The user is dictating in an unidentified app." }
+        if let window = known(fields["Window"]), window != app {
+            return "The user is dictating in \(app), in the window \"\(window)\"."
+        }
+        return "The user is dictating in \(app)."
+    }
+
     /// Remove uh/um/uhm/hmm with the commas around them, keeping any sentence-ending mark.
     static func stripFillers(_ text: String) -> String {
         var out = sub(#"(?:\s*,)?\s*(?<![\w'])(?:u+h+m*|u+m+|h+m{2,})(?![\w'])([,.!?…]*)\s*"#, text,
