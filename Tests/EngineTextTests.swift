@@ -51,6 +51,19 @@ enum EngineTextTests {
         testHintInsertion()
         testKeepSpokenWords()
         testAppPromptIsRecognised()
+        testContextSummary()
+    }
+
+    /// The context request is answered from its metadata, without the model; other requests are not touched.
+    private static func testContextSummary() {
+        let request = "Analyze the screenshot plus metadata to infer current activity.App: Mail\nBundle ID: com.example.mail\nWindow: Re: Quarterly plan\nSelected text: None"
+        TestSupport.expectEqual(CleanupText.contextSummary(request), "The user is dictating in Mail, in the window \"Re: Quarterly plan\".")
+        TestSupport.expectEqual(CleanupText.contextSummary("App: Notes\nBundle ID: com.example.notes\nWindow: Notes\nSelected text: None"),
+                                "The user is dictating in Notes.")
+        TestSupport.expectEqual(CleanupText.contextSummary("App: Unknown\nBundle ID: Unknown\nWindow: Unknown"),
+                                "The user is dictating in an unidentified app.")
+        TestSupport.expect(CleanupText.contextSummary("Instructions: Clean up RAW_TRANSCRIPTION\nhello") == nil,
+                           "a cleanup request is not a context request")
     }
 
     /// The cleanup model was trained on the compact prompt: TellWell's real default prompt (and with the vocabulary
