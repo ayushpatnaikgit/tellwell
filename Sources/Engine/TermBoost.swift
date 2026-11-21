@@ -157,6 +157,9 @@ struct TermBoost {
             guard let best = scored.max(by: { $0.0 < $1.0 || ($0.0 == $1.0 && $0.1 < $1.1) }),
                   best.0 >= Self.minSimilarity else { continue }
             let first = sw[best.1]
+            // The replaced words must start where the name does. If the name began inside the word before them
+            // ("ayushpat nayak", boosted "Patnaik" from "pat"), swapping would type part of it twice.
+            if first.2 > start + 0.16 { continue }
             let replaced = String(out[first.0..<last.1].flatMap { pieces[$0.id] }).trimmingCharacters(in: edges)
             if replaced == spelled { continue }
             // Only words the recogniser was unsure of may be replaced: a confidently heard "India" stays, even if the

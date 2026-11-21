@@ -91,7 +91,7 @@ enum TermBoostTests {
         TestSupport.expectEqual(text(silence), "loop in sidhunt")
 
         // Boosting never drops words (these used to lose "to" and the run-together surname).
-        let names = ["▁ayush", "patna", "▁yak", "▁to", "▁pat", "naik", "▁send", "nake"]
+        let names = ["▁ayush", "patna", "▁yak", "▁to", "▁pat", "naik", "▁send", "nake", "▁ayushpat", "▁nayak"]
         let namePieces = TermBoost.pieces(names)
         func nameText(_ tokens: [WindowStitch.Token]) -> String {
             tokens.map { names[$0.id] }.joined().replacingOccurrences(of: "▁", with: " ").trimmingCharacters(in: .whitespaces)
@@ -113,6 +113,11 @@ enum TermBoostTests {
         let (unlike, _) = full.acceptTerms(stock: [u(0, 0.0), u(1, 0.2), u(2, 0.6)],
                                            boosted: [t(0, 0.0), t(1, 0.2), t(4, 0.6), t(5, 0.7)], pieces: namePieces)
         TestSupport.expectEqual(nameText(unlike), "ayushpatna yak")
+        // A name that began inside the word before ("ayushpat nayak", boosted "Patnaik" from "pat") is not swapped
+        // in, or part of it would be typed twice ("ayushpat patnaik").
+        let (inside, _) = full.acceptTerms(stock: [WindowStitch.Token(id: 8, time: 0.0, prob: 0.9), u(9, 0.6)],
+                                           boosted: [t(4, 0.3), t(5, 0.4)], pieces: namePieces)
+        TestSupport.expectEqual(nameText(inside), "ayushpat nayak")
 
         // Casing only for whole words: "graph" stays, "grafana" takes the listed spelling.
         TestSupport.expectEqual(boost.spellTerms("the graph in grafana"), "the graph in Grafana")
