@@ -50,6 +50,10 @@ enum TwoPassTests {
                            "no punctuation needs cleanup")
         TestSupport.expect(!TwoPass.canSkipCleanup(heard: "Ask Sid hunt to look.", flags: [Bool](repeating: false, count: 5),
                                                    terms: ["Siddhant"]), "a near-miss of a listed name needs cleanup")
+        TestSupport.expect(!TwoPass.canSkipCleanup(heard: "We store the embeddings in post gress.", flags: [Bool](repeating: false, count: 6),
+                                                   terms: ["Postgres"]), "a term inside a longer heard word is not spelled out")
+        TestSupport.expect(!TwoPass.canSkipCleanup(heard: "On se voit jeudi, non, vendredi à midi.", flags: [Bool](repeating: false, count: 8)),
+                           "non-English text needs cleanup")
 
         // Flags follow words through filler stripping.
         TestSupport.expectEqual(TwoPass.flags(for: "So the cash is stale.", heard: ["So", "um", "the", "cash", "is", "stale."],

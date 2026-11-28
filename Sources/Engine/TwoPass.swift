@@ -253,6 +253,10 @@ enum TwoPass {
         }
         for r in [cueAnyCase, softFillers, spoken, numberWords, greeting] where matches(r, text) { return false }
         if !matches(punctuation, text) { return false }
+        // Non-English letters: the correction cues and fillers above are English only.
+        if text.unicodeScalars.contains(where: { $0.value > 0x7F && !"\u{2018}\u{2019}\u{201C}\u{201D}\u{2013}\u{2014}".unicodeScalars.contains($0) }) {
+            return false
+        }
         if nearTerm(text, terms) { return false }
         return true
     }
@@ -263,10 +267,13 @@ enum TwoPass {
         let low = heard.lowercased()
         let ns = low as NSString
         let words = letters.matches(in: low, range: NSRange(location: 0, length: ns.length)).map { ns.substring(with: $0.range) }
-        let squashed = low.replacingOccurrences(of: " ", with: "")
         for term in terms {
             let t = term.lowercased().filter { $0.isASCII && ($0.isLetter || $0.isNumber) }
-            guard !t.isEmpty, !squashed.contains(t) else { continue }
+            // Already spelled out as a whole word ("postgres" inside "post gress" doesn't count).
+            let escaped = NSRegularExpression.escapedPattern(for: term.lowercased())
+            let spelled = (try? NSRegularExpression(pattern: "(?<![a-z0-9])" + escaped + "(?![a-z0-9])"))
+                .map { matches($0, low) } ?? false
+            guard !t.isEmpty, !spelled else { continue }
             let span = term.split(separator: " ").count + 2
             for k in 1..<span {
                 for i in words.indices {
