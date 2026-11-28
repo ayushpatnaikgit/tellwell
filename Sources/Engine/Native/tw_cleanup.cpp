@@ -96,6 +96,11 @@ extern "C" int tw_cleanup_load(const char *model_path, int n_gpu_layers, int thr
     cp.n_ubatch = 512;
     cp.n_threads = threads;
     cp.n_threads_batch = threads;
+    // 8-bit KV cache (needs Flash Attention for the V cache): half the memory of f16 (S1-mini at 4096 tokens:
+    // ~448 -> ~224 MB) and half the cache read per token. Same score on the 95 cleanup cases; 4-bit broke it.
+    cp.flash_attn_type = LLAMA_FLASH_ATTN_TYPE_ENABLED;
+    cp.type_k = GGML_TYPE_Q8_0;
+    cp.type_v = GGML_TYPE_Q8_0;
     g.ctx = llama_init_from_model(g.model, cp);
     if (!g.ctx) {
         llama_model_free(g.model);
