@@ -20,6 +20,20 @@ actor InAppEngine {
     static let screenWordsMaxAge: TimeInterval = 300
 
     private var speech: SpeechRecognizer?
+    /// The last transcript this engine produced and which of its words the labeller flagged as likely misheard
+    /// (TwoPass). Kept in memory only, for the cleanup request about that transcript.
+    private var lastTranscript: (text: String, flags: [Bool])?
+    /// What two-pass cleanup did to the last cleanup request: "skipped" (used as heard), "gated", or "" (off/n.a.).
+    private(set) var lastTwoPassAction = ""
+    /// The suspect-word labeller's weights (bundled; nil if missing, which turns flagging off).
+    private static let labeller: TwoPass.Labeller? = {
+        guard let url = Bundle.main.url(forResource: "two-pass-labeller", withExtension: "json"),
+              let data = try? Data(contentsOf: url),
+              let lab = try? JSONDecoder().decode(TwoPass.Labeller.self, from: data), lab.isValid else { return nil }
+        return lab
+    }()
+    /// Two-pass cleanup (router + gate) is on unless turned off with the `engine_two_pass` default.
+    private var twoPassOn: Bool { UserDefaults.standard.object(forKey: "engine_two_pass") as? Bool ?? true }
     private var lastUse = Date()
     private var idleTask: Task<Void, Never>?
     private var screenWords: [String]?          // this dictation's words, once read
@@ -129,13 +143,20 @@ actor InAppEngine {
         let cache = windowCache.url == fileURL ? windowCache : WindowCache()
         windowCache = WindowCache()
         if streamed.currentURL == fileURL { streamed.reset() }   // not a newer recording's audio
-        let text = try await onWorkQueue { [speech] in
-            try speech.transcribe(try SpeechRecognizer.samples(from: fileURL),
-                                  using: terms.isEmpty ? nil : TermBoost(terms: terms),
-                                  reuse: { start, samples in cache.lookup(start: start, terms: terms, samples: samples) })
+        let (text, heard) = try await onWorkQueue { [speech] in
+            let text = try speech.transcribe(try SpeechRecognizer.samples(from: fileURL),
+                                             using: terms.isEmpty ? nil : TermBoost(terms: terms),
+                                             reuse: { start, samples in cache.lookup(start: start, terms: terms, samples: samples) })
+            return (text, speech.lastHeard)
         }
         touch()
-        return CleanupText.stripFillers(text)
+        let final = CleanupText.stripFillers(text)
+        if let labeller = Self.labeller {
+            lastTranscript = (final, TwoPass.flags(for: final, heard: heard.map(\.word), heardFlags: labeller.flags(heard)))
+        } else {
+            lastTranscript = nil
+        }
+        return final
     }
 
     /// The names and terms to favour: vocabulary, the user's own name and this dictation's screen words.
@@ -206,18 +227,38 @@ actor InAppEngine {
 
         var raw: String?
         var vocabulary: [String] = []
+        var defaultPrompt = false                  // the app's own cleanup prompt, with no language instructions
+        var hintTerms: [String] = []               // listed terms and this dictation's screen words
         if messages.count >= 2, messages[0].role == "system", messages.last!.content.contains("RAW_TRANSCRIPTION") {
-            if let compact = CleanupText.compactSystemPrompt(messages[0].content) { messages[0].content = compact }
+            if let compact = CleanupText.compactSystemPrompt(messages[0].content) {
+                messages[0].content = compact
+                defaultPrompt = !compact.contains("\n\nIMPORTANT: ")
+            }
             raw = CleanupText.rawTranscript(messages.last!.content)
             vocabulary = CleanupText.vocabularyTerms(messages[0].content)
             if let raw {
                 let screen = await takeScreenWords()
+                hintTerms = vocabulary + screen
                 if !screen.isEmpty || !vocabulary.isEmpty {
                     let known = Set(vocabulary.map { $0.lowercased() })
                     let found = ScreenWords.relevant(vocabulary + screen.filter { !known.contains($0.lowercased()) }, transcript: raw)
                     messages[messages.count - 1].content = CleanupText.addingHints(
                         messages.last!.content, section: ScreenWords.promptSection(found))
                 }
+            }
+        }
+
+        // Two-pass cleanup: the flags apply only to the transcript they were made for.
+        var flags: [Bool]?
+        lastTwoPassAction = ""
+        if let raw, twoPassOn, defaultPrompt {
+            let words = raw.split(separator: " ").count
+            if let last = lastTranscript, last.text == raw, last.flags.count == words { flags = last.flags }
+            // Nothing in the transcript calls for cleanup: use it as heard.
+            if let flags, TwoPass.canSkipCleanup(heard: raw, flags: flags, terms: hintTerms) {
+                touch()
+                lastTwoPassAction = "skipped"
+                return try Self.response(raw)
             }
         }
 
@@ -231,6 +272,12 @@ actor InAppEngine {
             text = CleanupText.keepSpokenWords(raw: raw, cleaned: text)
             if CleanupText.expandedTooMuch(raw: raw, cleaned: text).revert { text = raw }
             text = CleanupText.restoreUnsupportedTerms(raw: raw, cleaned: text, terms: vocabulary).0
+            // Undo changes the gate doesn't allow (no flags if the transcript isn't the one just recognised).
+            if twoPassOn, defaultPrompt, !text.isEmpty {
+                let f = flags ?? [Bool](repeating: false, count: raw.split(separator: " ").count)
+                text = TwoPass.gate(heard: raw, cleaned: text, flags: f, terms: hintTerms)
+                lastTwoPassAction = "gated"
+            }
         }
         touch()
         return try Self.response(text)
