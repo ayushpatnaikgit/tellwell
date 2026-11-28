@@ -28,6 +28,11 @@ final class SpeechRecognizer: @unchecked Sendable {  // used only on the engine'
     private let pieces: [[Character]]
     /// Words swapped in by boosting in the last transcription (a count only, for the benchmark).
     private(set) var boostedWords = 0
+    /// Windows in the last transcription that still had an "<unk>" run after one retry (a count only).
+    private(set) var unknownRetriesFailed = 0
+    /// The last transcription's words as heard (before name correction), with their speech features where the
+    /// ordinary pass produced them. Used by the suspect-word labeller (TwoPass).
+    private(set) var lastHeard: [(word: String, features: WindowStitch.WordFeatures?)] = []
 
     init(directory: URL) throws {
         func model(_ name: String) throws -> MLModel {
@@ -131,7 +136,8 @@ final class SpeechRecognizer: @unchecked Sendable {  // used only on the engine'
         let encoded = e.featureValue(for: "encoder")!.multiArrayValue!               // [1, 1024, T]
         let frames = min(e.featureValue(for: "encoder_length")!.multiArrayValue![0].intValue, encoded.shape[2].intValue)
         var checkpoints: [Checkpoint] = []
-        let stock = try decode(encoded, frames, checkpoints: &checkpoints)
+        var stock = try decode(encoded, frames, checkpoints: &checkpoints)
+        addWordFeatures(encoded, frames, &stock)
         guard let boost, boost.isOn, canBoost else { return stock }
         // Second pass with boosting (the encoder output is reused). Only whole listed terms are taken from it.
         let boosted: [Token]
@@ -165,6 +171,29 @@ final class SpeechRecognizer: @unchecked Sendable {  // used only on the engine'
         let (tokens, swapped) = boost.acceptTerms(stock: stock, boosted: boosted, pieces: pieces)
         boostedWords += swapped
         return tokens
+    }
+
+    /// Adds `WordFeatures` to the first piece of every word: the mean encoder vector from the word's first frame to the
+    /// next word's (the last word: up to 3 frames past its last piece), its length, and the frames between its last
+    /// piece and the next word. Token times are still relative to the window here.
+    private func addWordFeatures(_ encoded: MLMultiArray, _ frames: Int, _ tokens: inout [Token]) {
+        guard frames > 0, !tokens.isEmpty else { return }
+        let s1 = encoded.strides[1].intValue, s2 = encoded.strides[2].intValue
+        func frame(_ t: Token) -> Int { min(frames - 1, max(0, Int((t.time / secondsPerFrame).rounded()))) }
+        let starts = tokens.indices.filter { $0 == 0 || pieces[tokens[$0].id].first == "▁" }
+        encoded.withUnsafeBufferPointer(ofType: Float.self) { src in
+            for (k, i) in starts.enumerated() {
+                let lastPiece = (k + 1 < starts.count ? starts[k + 1] : tokens.count) - 1
+                let s = frame(tokens[i]), e = frame(tokens[lastPiece])
+                let next = k + 1 < starts.count ? frame(tokens[starts[k + 1]]) : frames
+                let end = min(frames, max(k + 1 < starts.count ? next : min(next, e + 3), s + 1))
+                var mean = [Float](repeating: 0, count: encoderWidth)
+                for t in s..<end { for d in 0..<encoderWidth { mean[d] += src[d * s1 + t * s2] } }
+                let n = Float(end - s)
+                for d in 0..<encoderWidth { mean[d] /= n }
+                tokens[i].features = WindowStitch.WordFeatures(mean: mean, frames: end - s, pause: max(0, next - e - 1))
+            }
+        }
     }
 
     /// The decoder's state just before a word was emitted by the ordinary pass, so the boosted pass can start there.
@@ -379,6 +408,8 @@ final class SpeechRecognizer: @unchecked Sendable {  // used only on the engine'
     /// The text of `samples`, with a configured boost (or none). `reuse` can supply windows decoded earlier.
     func transcribe(_ samples: [Float], using boost: TermBoost?, reuse: Reuse? = nil) throws -> String {
         boostedWords = 0
+        unknownRetriesFailed = 0
+        lastHeard = []
         guard samples.count >= 160 else { return "" }
         let listed = boost?.terms ?? []
         let boost = canBoost && boost?.isOn == true ? boost : nil
@@ -388,8 +419,15 @@ final class SpeechRecognizer: @unchecked Sendable {  // used only on the engine'
             let end = min(start + windowSamples, samples.count)
             let offset = Double(start) / Double(Self.sampleRate)
             let slice = samples[start..<end]
-            let decoded = try reuse?(start, slice) ?? window(slice, boost: boost)
-            let tokens = decoded.map { Token(id: $0.id, time: $0.time + offset, prob: $0.prob) }
+            var decoded = try reuse?(start, slice) ?? window(slice, boost: boost)
+            // Now and then the recogniser emits a run of "<unk>" pieces for audio it handles fine on a second try:
+            // decode that window again once, then drop any "<unk>" left so it is never typed.
+            if WindowStitch.hasUnknownRun(decoded) {
+                decoded = try window(slice, boost: boost)
+                if WindowStitch.hasUnknownRun(decoded) { unknownRetriesFailed += 1 }
+            }
+            decoded.removeAll { $0.id == WindowStitch.unknownID }
+            let tokens = decoded.map { Token(id: $0.id, time: $0.time + offset, prob: $0.prob, features: $0.features) }
             if start == 0 {
                 all = tokens
             } else {
@@ -401,6 +439,7 @@ final class SpeechRecognizer: @unchecked Sendable {  // used only on the engine'
         }
         var text = all.map { vocab[$0.id] }.joined().replacingOccurrences(of: "▁", with: " ")
             .trimmingCharacters(in: .whitespaces)
+        lastHeard = WindowStitch.words(all, vocab: vocab)
         guard !listed.isEmpty else { return text }
         // Words the recogniser was unsure of that sound like a listed name ("Putnamic" -> Patnaik).
         var words: [(String, Float)] = []

@@ -19,6 +19,7 @@ TEST_PRODUCTION_SOURCES = \
 	Sources/Engine/ScreenWords.swift \
 	Sources/Engine/CleanupText.swift \
 	Sources/Engine/WindowStitch.swift \
+	Sources/Engine/TwoPass.swift \
 	Sources/Engine/StreamingAudio.swift \
 	Sources/Engine/TermBoost.swift \
 	Sources/Engine/JointScores.swift \
@@ -76,7 +77,7 @@ ICON_SOURCE = Resources/AppIcon-Source.png
 ICON_ICNS = Resources/AppIcon.icns
 endif
 
-.PHONY: all check clean run icon dmg codesign-dmg notarize test typecheck validate
+.PHONY: feature-dump pipeline-harness all check clean run icon dmg codesign-dmg notarize test typecheck validate
 
 all: $(APP_EXECUTABLE_TARGET)
 
@@ -87,7 +88,7 @@ $(ENGINE_OBJ): Sources/Engine/Native/tw_cleanup.cpp Sources/Engine/Native/tw_cle
 	@mkdir -p "$(dir $@)"
 	clang++ -std=c++17 -O2 -arch arm64 -mmacosx-version-min=$(MIN_MACOS) -I "$(LLAMA_DIR)/include" -c $< -o $@
 
-$(APP_EXECUTABLE_TARGET): $(SOURCES) Info.plist $(ICON_ICNS) $(ENGINE_OBJ)
+$(APP_EXECUTABLE_TARGET): $(SOURCES) Info.plist $(ICON_ICNS) $(ENGINE_OBJ) Resources/two-pass-labeller.json
 	@if [ "$(ARCH)" != "arm64" ]; then echo "TellWell needs Apple Silicon: build with ARCH=arm64" >&2; exit 1; fi
 	@mkdir -p "$(MACOS_DIR)" "$(RESOURCES)"
 	swiftc \
@@ -107,6 +108,7 @@ $(APP_EXECUTABLE_TARGET): $(SOURCES) Info.plist $(ICON_ICNS) $(ENGINE_OBJ)
 	@plutil -replace CFBundleExecutable -string "$(APP_NAME)" "$(CONTENTS)/Info.plist"
 	@plutil -replace CFBundleIdentifier -string "$(BUNDLE_ID)" "$(CONTENTS)/Info.plist"
 	@cp $(ICON_ICNS) "$(RESOURCES)/AppIcon.icns"
+	@cp Resources/two-pass-labeller.json "$(RESOURCES)/two-pass-labeller.json"
 	@plutil -replace NSMicrophoneUsageDescription -string "$(APP_NAME) needs microphone access to transcribe your speech." "$(CONTENTS)/Info.plist"
 	@plutil -replace NSSpeechRecognitionUsageDescription -string "$(APP_NAME) needs speech recognition to convert your voice to text." "$(CONTENTS)/Info.plist"
 	@plutil -replace NSAccessibilityUsageDescription -string "$(APP_NAME) needs accessibility access to detect the text cursor position and paste transcribed text." "$(CONTENTS)/Info.plist"
@@ -203,6 +205,22 @@ notarize:
 	xcrun notarytool submit "$(BUILD_DIR)/$(APP_NAME).dmg" \
 		--keychain-profile "$(NOTARIZE_PROFILE)" --wait
 	xcrun stapler staple "$(BUILD_DIR)/$(APP_NAME).dmg"
+
+# Development tools (not shipped): the app's own recogniser and pipeline on audio files, for measuring the two-pass
+# cleanup on public or synthetic speech. See the comments at the top of each main.swift.
+TOOL_SDK = -sdk $(shell xcrun --show-sdk-path) -target arm64-apple-macosx$(MIN_MACOS) -import-objc-header $(BRIDGING_HEADER)
+feature-dump: $(SOURCES) tools/feature-dump/main.swift
+	@mkdir -p $(BUILD_DIR)
+	swiftc -O $(TOOL_SDK) Sources/Engine/SpeechRecognizer.swift Sources/Engine/WindowStitch.swift Sources/Engine/TermBoost.swift \
+		Sources/Engine/JointScores.swift Sources/Engine/ScreenWords.swift Sources/Engine/SequenceMatcher.swift \
+		tools/feature-dump/main.swift -o $(BUILD_DIR)/feature-dump
+
+pipeline-harness: $(SOURCES) tools/pipeline-harness/main.swift $(ENGINE_OBJ)
+	@mkdir -p $(BUILD_DIR)
+	swiftc -O -parse-as-library $(TOOL_SDK) $(filter-out Sources/App.swift,$(SOURCES)) tools/pipeline-harness/main.swift \
+		$(ENGINE_LINK) -o $(BUILD_DIR)/pipeline-harness
+	cp Resources/two-pass-labeller.json $(BUILD_DIR)/
+
 
 clean:
 	rm -rf $(BUILD_DIR)
