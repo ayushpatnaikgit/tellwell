@@ -11,7 +11,7 @@ set -eu
 
 BASE="${TELLWELL_RELEASE:-https://github.com/ayushpatnaikgit/tellwell/releases/latest/download}"
 # The app's designated requirement: its identifier and the certificate its releases are signed with.
-REQUIREMENT='identifier "io.github.ayushpatnaikgit.tellwell" and certificate leaf = H"f37d1a1521d7e1871ed0cdee2009d5636da9abd2"'
+REQUIREMENT='identifier "io.github.ayushpatnaikgit.tellwell" and certificate leaf = H"103f0fde86eb0493d90eb2c10ab0dde032ddc4f6"'
 
 say() { printf '%s\n' "$*"; }
 fail() { printf 'Error: %s\n' "$*" >&2; exit 1; }

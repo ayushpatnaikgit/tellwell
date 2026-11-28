@@ -41,9 +41,10 @@ Mac dictation app. It keeps everything FreeFlow does and adds a focus on running
 recognition on the Apple Neural Engine and a small cleanup model fine-tuned for dictation, both built into the app.
 
 **Status: early.** TellWell isn't signed with an Apple Developer ID; the one-line installer avoids macOS's
-"could not verify" prompt. From 0.2.1, releases are signed with a self-signed certificate (SHA-1
-`F37D1A1521D7E1871ED0CDEE2009D5636DA9ABD2`), so macOS recognises each update as the same app and your Microphone,
-Accessibility and Screen Recording permissions carry over. You can check a copy with
+"could not verify" prompt. From 0.3.1, releases are signed with a self-signed certificate (SHA-1
+`103F0FDE86EB0493D90EB2C10AB0DDE032DDC4F6`; 0.2.1 to 0.3.0 used `F37D1A1521D7E1871ED0CDEE2009D5636DA9ABD2`), so
+macOS recognises each update as the same app and your Microphone, Accessibility and Screen Recording permissions carry
+over. You can check a copy with
 `codesign -dr - /Applications/TellWell.app`. TellWell installs alongside FreeFlow without sharing settings or
 permissions.
 
